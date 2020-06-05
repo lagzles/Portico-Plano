@@ -63,6 +63,9 @@ class Section():
 
     def get_rx(self):
         return self.rx
+    
+    def get_ix(self):
+        return self.ix
 
     def get_ry(self):
         return self.ry
