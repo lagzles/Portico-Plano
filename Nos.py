@@ -1,7 +1,7 @@
 
 
 class Nos(object):
-    def __init__(self, x, y, gx, gy, gz, fx, fy, mz, apoio):
+    def __init__(self, x, y, gx, gy, gz, apoio):
         self.x = x
         self.y = y
         
@@ -9,9 +9,9 @@ class Nos(object):
         self.gy = gy
         self.gz = gz
 
-        self.fx = fx
-        self.fy = fy
-        self.mz = mz
+        self.fx = 0
+        self.fy = 0
+        self.mz = 0
 
         self.id = gz / 3
 
