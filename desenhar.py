@@ -3,15 +3,11 @@ from dxfwrite import DXFEngine as dxf
 def desenhar_portico(portico, filename):
     dwg = dxf.drawing(filename)
 
-    print('desenhando')
-
     for barra in portico.lista_barras:
         pi = [barra.ni.x*1, barra.ni.y*1]
         pf = [barra.nf.x*1, barra.nf.y*1]
         desenhar_linhas(dwg, pi, pf)
     
-    print('desenhado')
-
     if dwg != None:
         dwg.save()
 
