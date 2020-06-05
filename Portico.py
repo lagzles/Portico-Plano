@@ -55,6 +55,7 @@ class Portico(object):
 			fa = np.zeros((len(self.liv)))
 			fo = np.zeros((self.gdl))
 			contador = 0
+			contador2 = 0
 			for barra in self.lista_barras:
 				if barra.tipo == 'viga':
 					mz = (carr * (barra.comprimento() ** 2) ) / 12.
@@ -69,46 +70,43 @@ class Portico(object):
 					fbi[5] = round(-mz,2)
 
 					barra.fbi = fbi
-					print(fbi)
 					foi = fbi
 
 					fci = np.dot(np.transpose(barra.li), foi)
+					# print('fci \n', fci)
 
 					fo = fo + fci
 					contador += fy*2
+					contador2 += 1
 
 			ap = self.ap
 			liv = self.liv
 			k = self.k
-
+			# print('ap', ap)
+			# print('liv', liv)
+			# print('k', k)
 
 			ka = np.delete(np.delete(k, ap, axis=0), ap, axis=1)
 			kb = np.delete(np.delete(k, liv, axis=0), ap, axis=1)
 
 			ka_inv = np.linalg.inv(ka)
 			foa = np.delete(fo, ap, axis=0)
-			# fca = np.delete(fca, ap, axis=0)
 
 			fca = fa - foa
-
-			# fca = np.delete(fca, ap, axis=0)
-
-			print('ap', ap)
-			print('liv', liv)
-			print('fca', fca)
 
 			ua = ka_inv.dot(fca)
 			fb = np.dot(kb, ua)
 
 			print('Reações de APOIO', len(fb))
 			print('X	Y	MZ')
-			print(fb[0], fb[1], fb[2])
-			print(fb[3], fb[4], fb[5])
-			# print(fb[6], fb[7], fb[8])
+			print(round(fb[0],2), round(fb[1],2), round(fb[2],2))
+			print(round(fb[3],2), round(fb[4],2), round(fb[5],2))
+			print(round(fb[6],2), round(fb[7],2), round(fb[8],2))
+			print(round(fb[9],2), round(fb[10],2), round(fb[11],2))
 			print('\nsoma de verticais')
-			print(fb[1]+fb[4])#+fb[7])
+			print(round(fb[1]+fb[4]+fb[7]+fb[10],2))
 			print('soma de esforços verticais\n',contador)
-			# print(fb[9], fb[10], fb[11])
+			print('soma de vigas\n',contador2)
 
 	
 	def MontarMatrizRigidez(self):
@@ -140,9 +138,8 @@ class Portico(object):
 
 	def DefinirGDL(self):
 		numeroNos = len(self.lista_nos)
-		# print('numero de nos * 3 , self.gdl')
-		# print(numeroNos*3, self.gdl)
-		# print(len(self.lista_barras))
+		print('gdls')
+		print(numeroNos*3, self.gdl)
 		maiorGdl = 0
 
 	def GerarBarrasEPontos(self):
@@ -224,11 +221,19 @@ class Portico(object):
 		for ponto in pontos_base:
 			x = ponto[0]
 			y = ponto[1]
-			print('x','y')
-			print(x,y)
 			gdl = self.gdl
+			
+			pontoIndex = pontos_base.index(ponto)
 
-			apoio = 'engaste'
+			if pontoIndex == 0 or pontoIndex == (len(pontos_base)-1):
+				apoio = 'engaste'
+				print('e')
+			else:
+				# apoio = 'rotulado'
+				print('r')
+				apoio = 'bi-articulado'
+				# apoio = 'engaste'
+
 			gx = gdl + 1
 			gy = gdl + 2
 			gz = gdl + 3
@@ -240,7 +245,7 @@ class Portico(object):
 			for no in self.lista_nos:
 				if no.x == nob.x and no.y != 0:
 					barraId = len(self.lista_barras)+1
-					coluna = br.Barras(nob,no,barraId,1,1, 'coluna')
+					coluna = br.Barras(no, nob, barraId, 1, 1, 'coluna')
 					self.lista_barras.append(coluna)
 
 

@@ -99,8 +99,9 @@ class Barras(object):
         theta = self.theta
         kbi = np.zeros((6, 6))
         
-        if self.get_ni().apoio != 'rotulado':
+        if self.nf.apoio == 'engaste' or self.nf.apoio == False:
             # situação de barras engastadas em ambas extremidades
+            print('engaste/engaste')
             kbi[0][0] = e * a / l
             kbi[0][3] = - e * a / l
 
@@ -126,9 +127,19 @@ class Barras(object):
             kbi[5][2] = 2 * e * ix / (l)
             kbi[5][4] = - 6 * e * ix / (l**2)
             kbi[5][5] = 4 * e * ix / (l)
-        
+
+        elif self.get_nf().apoio == 'bi-articulado':
+            # situação de barras articulada em ambas extremidades
+            print('bi-articulada')
+            kbi[0][0] = e * a / l
+            kbi[0][3] = - e * a / l
+
+            kbi[3][0] = - e * a / l
+            kbi[3][3] = e * a / l
+
         else:
             #situação de barra rotulada / engastada
+            print('engaste/rotulada')
             kbi[0][0] = e * a / l
             kbi[0][3] = - e * a / l
 
@@ -198,14 +209,14 @@ class Barras(object):
     # 1 - FIM
     ######################################################
 
-    def esforcos_nodais(self, ua_list, gdl, liv):
+    def esforcos_nodais(self, ua_list, liv):
         # gdl graus de liberdade do sistema
         # matriz de deslocamentos nodais
         # matriz com graus de liberdade livres
         # ua_list - lista com deslocamentos nodais gravitacionais e de vento
         for ua in ua_list:
             # cria uma matriz de 'zeros' de dimensões gdl x gdl
-            u = np.zeros((gdl,))
+            u = np.zeros((self.gdl,))
             for i in range(len(ua)):
                 # para nó livre, atribuir o valor na matriz de zeros
                 u[liv[i]] = ua[i]

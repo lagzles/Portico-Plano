@@ -1,9 +1,9 @@
 from Portico import Portico
 
 
-vaos = [7]
-pd = 5
-cumeeira = 3.5
+vaos = [20,20,25]
+pd = 10
+cumeeira = 40
 inc = 3
 influencia = 10.000
 
