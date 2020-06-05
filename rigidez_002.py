@@ -1,12 +1,12 @@
-import barras_002 as b
-import nos_001 as nos
+import Barras as b
+import Nos as nos
 import numpy as np
 from tkinter import messagebox
 
 
-def analise_matriz_carregamentos(trelica):
-    noss = trelica.nos_objetos
-    barras = trelica.barras_objetos
+def analise_matriz_carregamentos(portico):
+    noss = portico.nos_objetos
+    barras = portico.barras_objetos
     gdl = len(noss) * 2
 
     liv = []
@@ -15,11 +15,11 @@ def analise_matriz_carregamentos(trelica):
     
     ##k = None
     ##k = b1.kci + b2.kci + b3.kci + b4.kci + b5.kci + b6.kci
-    liv = trelica.liv
-    ap = trelica.ap
-    fa_grav = trelica.fa_grav
-    fa_cv = trelica.fa_cv
-    k = trelica.k
+    liv = portico.liv
+    ap = portico.ap
+    fa_grav = portico.fa_grav
+    fa_cv = portico.fa_cv
+    k = portico.k
 
     fa_cv = np.delete(fa_cv, ap, axis=0)
     fa_grav = np.delete(fa_grav, ap, axis=0)
@@ -47,8 +47,8 @@ Em caso de dúvida:
     ua_grav = ka_inv.dot((fa_grav))
     ua_cv = ka_inv.dot(fa_cv)
 
-    trelica.ua_grav = ua_grav
-    trelica.ua_cv = ua_cv
+    portico.ua_grav = ua_grav
+    portico.ua_cv = ua_cv
     # reações nos apoios
     fb_grav = np.dot(kb, ua_grav)
     fb_cv = np.dot(kb, ua_cv)
@@ -56,11 +56,11 @@ Em caso de dúvida:
     print('='*45)
     print('fb', 'Reações nos Apoios - Gravitacionais')
     print(np.round(fb_grav, decimals=2))
-    trelica.reacoes_grav = np.round(fb_grav, decimals=2)
+    portico.reacoes_grav = np.round(fb_grav, decimals=2)
     print('='*45)
     print('fb', 'Reações nos Apoios - Vento')
     print(np.round(fb_cv, decimals=2))
-    trelica.reacoes_cv = np.round(fb_cv, decimals=2)
+    portico.reacoes_cv = np.round(fb_cv, decimals=2)
     print('='*45)
     print("...")
 

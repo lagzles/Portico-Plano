@@ -1,5 +1,5 @@
 # from operator import attrgetter
-import barras_002 as bar
+import Barras as bar
 import verificar_001 as verificar
 
 class Section():
