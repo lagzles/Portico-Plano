@@ -100,6 +100,7 @@ class Barras(object):
         kbi = np.zeros((6, 6))
         
         if self.get_ni().apoio != 'rotulado':
+            # situação de barras engastadas em ambas extremidades
             kbi[0][0] = e * a / l
             kbi[0][3] = - e * a / l
 
@@ -127,6 +128,7 @@ class Barras(object):
             kbi[5][5] = 4 * e * ix / (l**2)
         
         else:
+            #situação de barra rotulada / engastada
             kbi[0][0] = e * a / l
             kbi[0][3] = - e * a / l
 

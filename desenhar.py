@@ -1,18 +1,16 @@
 from dxfwrite import DXFEngine as dxf
 
-def desenhar_trelica(trelica, filename):
+def desenhar_portico(portico, filename):
     dwg = dxf.drawing(filename)
 
-    for barra in trelica.barras_objetos:
-        pi = [barra.ni.x*100, barra.ni.y*100]
-        pf = [barra.nf.x*100, barra.nf.y*100]
+    print('desenhando')
 
-        if barra.tipo == 'montante':
-            desenhar_montantes(dwg, pi, pf)
-        elif barra.tipo == 'diagonal':
-            desenhar_diagonais(dwg, pi, pf)
-        else:
-            desenhar_banzos(dwg, pi, pf)
+    for barra in portico.lista_barras:
+        pi = [barra.ni.x*1, barra.ni.y*1]
+        pf = [barra.nf.x*1, barra.nf.y*1]
+        desenhar_linhas(dwg, pi, pf)
+    
+    print('desenhado')
 
     if dwg != None:
         dwg.save()

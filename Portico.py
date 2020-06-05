@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-import zznos_002 as ns
-import zzbarras_003_teste as br
+import Nos as ns
+import Barras as br
+import desenhar as dwg
 
 class Portico(object):
 			
-		def __init__(self): #, lista_vaos, pe_direito, cumeeira, inclinacao):
-			lista_vaos = [22]
-			pe_direito = 12.5
-			cumeeira = 22
-			inclinacao = 3.0 / 100.
+		def __init__(self, lista_vaos, pe_direito, cumeeira, inclinacao):
+			# lista_vaos = [22]
+			# pe_direito = 12.5
+			# cumeeira = 22
+			# inclinacao = 3.0 / 100.
 			quantidade_porticos = 1
 			self.lista_vaos = lista_vaos
 			self.pe_direito = pe_direito
@@ -20,17 +21,24 @@ class Portico(object):
 
 			self.GerarBarrasEPontos()
 			self.DefinirGDL()
+			self.GerarDesenhoDXF()
 
 
+		def GerarDesenhoDXF(self):
+			barras = self.lista_barras
+
+			dwg.desenhar_portico(self, 'portico.dxf')
 
 		def DefinirGDL(self):
 			numeroNos = len(self.lista_nos)
+			print('numero de nos * 3 , self.gdl')
 			print(numeroNos*3, self.gdl)
-			self.gdl = numeroNos*3
+			# print(len(self.lista_barras))
+			maiorGdl = 0
 
 		def GerarBarrasEPontos(self):
 			# numero de vaos
-			n = len(lista_vaos)
+			n = len(self.lista_vaos)
 			# numero de pilares
 			np = n + 1
 
@@ -39,30 +47,26 @@ class Portico(object):
 			lista_barras = []
 
 			# altura livre não eh altura abaixo da viga, isso esta errado
-			altura_total = pe_direito
+			altura_total = self.pe_direito
 			pontos_base = []
 			pontos_topo = []
 			pontos_viga = []
 
 			cumeeira_alinhada = False
+			inclinacao = self.inclinacao / 100.0
 			# criar lista com os pontos de base e topo dos pilares
 			ptA_base = [0, 0]
 			ptA_topo = [0, 0 + altura_total]
 
 			# Pontos de cumeeira, abaixo e acima da viga, respectivamente
-			h_cumeeira = altura_total + cumeeira * inclinacao
+			h_cumeeira = altura_total + self.cumeeira * inclinacao
 
 			# cota 'x' do ponto inicial até a cumeeira
-			x_cumeeira = 0 + cumeeira
-			largura = sum(lista_vaos) * 1
+			cumeeira = 0 + self.cumeeira
+			largura = sum(self.lista_vaos) * 1
 
 			########################################################################
 			########################################################################
-
-			# definição dos angulos de rotação dos pilares
-			ang = 0
-			ang2 = 90
-
 			cota = 0
 			dx = 0
 
@@ -71,13 +75,13 @@ class Portico(object):
 				pontos_base = []
 				pontos_topo = []
 				# incremento de distancia para cada portico
-
+				pontos_base.append([0, 0])
 				pontos_topo.append([0, altura_total]) ########3
 
 				oitao = 0
 				# loop que vai gradativamente definindo a largura do oitao
 				# definindo os pontos de base e topo dos vãos
-				for vao in lista_vaos:	
+				for vao in self.lista_vaos:	
 					oitao += vao
 					# # caso a largura parcial do oitao seja menor que a dist. cumeeira
 					if oitao < cumeeira:
@@ -88,21 +92,20 @@ class Portico(object):
 						cumeeira_alinhada = True
 						
 					elif oitao > cumeeira: # caso o parcial do oitao seja maior que a cumeeira
-						cota = h_cumeeira - (oitao - cumeeira)*inclinacao
+						cota = h_cumeeira - (oitao - self.cumeeira)*inclinacao
 						
 					# caso a cumeeira esteja entre dois parciais do oitao
 					if oitao > cumeeira > (oitao - vao):
-						pontos_topo.append([cumeeira, h_cumeeira])
+						pontos_topo.append([self.cumeeira, h_cumeeira])
 						# acrescenta o ponto de viga da cumeeira
 					
 					pontos_base.append([oitao, 0])
 					pontos_topo.append([oitao, cota ])
 					# após definido os pontos de cada parcial do oitao, se define os pontos das vigas
 				# salvar cota do lado direito do galpao
-			
 			# lançar nós e barras das vigas, no objeto Portico
 			nof = None
-			for p in range(len(pontos_topo)):
+			for p in range(len(pontos_topo)-1):
 				pontoi = pontos_topo[p]
 				pontof = pontos_topo[p+1]
 				vao = pontof[0] - pontoi[0]
@@ -116,6 +119,8 @@ class Portico(object):
 					noi = nof
 
 				nof = self.PontosIntermediariosDaViga(noi, vao, cota)
+
+				# print('pti / ptf', noi.x, nof.x)
 
 			# lançar nós das bases e barras das colunas, no objeto Portico
 			for ponto in pontos_base:
@@ -145,7 +150,7 @@ class Portico(object):
 			yb = noi.y
 			
 			# no4
-			xt = vao
+			xt = xb + vao
 			yt = cota
 
 			# divisão padrão do vão em 3 partes
@@ -157,10 +162,9 @@ class Portico(object):
 				dx = (xt-xb) / n
 				dy = (yt-yb) / n
 
-
-				gdl = self.gdl
-				ptFim = ns.Nos(xb+dx, yb+dy, gdl+1, gdl+2, gdl+3, 0, 0, 0,False)
-				self.gdl += 3
+				# gdl = self.gdl
+				ptFim = None #ns.Nos(xb+dx, yb+dy, gdl+1, gdl+2, gdl+3, 0, 0, 0,False)
+				# self.gdl += 3
 				# para divisao padrao do vao, em 3 partes
 				for j in range(0, n):
 					if j == 0:
@@ -177,7 +181,7 @@ class Portico(object):
 
 					self.lista_barras.append(barraIntermediaria)
 					self.lista_nos.append(ptFim)
-					self.pontos_viga.append(ptFim)
+					
 			elif n == 1:
 				ptInicio = noi
 				gdl = self.gdl
@@ -189,7 +193,6 @@ class Portico(object):
 
 				self.lista_barras.append(barraIntermediaria)
 				self.lista_nos.append(ptFim)
-				self.pontos_viga.append(ptFim)
 
 			return ptFim
 
