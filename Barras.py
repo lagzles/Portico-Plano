@@ -3,7 +3,7 @@ import math as m
 import secao_002 as section
 
 class Barras(object):
-    def __init__(self, ni, nf, id, kx, ky):
+    def __init__(self, ni, nf, id, kx, ky, tipo):
         self.ni = ni
         self.nf = nf
         self.e = 20000.0 * 100.0 #kN/cm2 * 100 => kgf/cm2
@@ -13,7 +13,7 @@ class Barras(object):
         self.gdl = nf.gz # gdl # graus de liberdade
         self.compressao = 0
         self.tracao = 0
-        self.tipo = 'soldado'
+        self.tipo = tipo
 
         # definição das seções iniciais para as barras
         secao = 'soldado'
@@ -110,9 +110,9 @@ class Barras(object):
             kbi[1][5] = 6 * e * ix / (l**2)
 
             kbi[2][1] = 6 * e * ix / (l**2)
-            kbi[2][2] = 4 * e * ix / (l**1)
+            kbi[2][2] = 4 * e * ix / (l)
             kbi[2][4] = - 6 * e * ix / (l**2)
-            kbi[2][5] = 2 * e * ix / (l**1)
+            kbi[2][5] = 2 * e * ix / (l)
 
             kbi[3][0] = - e * a / l
             kbi[3][3] = e * a / l
@@ -122,10 +122,10 @@ class Barras(object):
             kbi[4][4] = 12 * e * ix / (l**3)
             kbi[4][5] = - 6 * e * ix / (l**2)
 
-            kbi[5][1] = 6 * e * ix / (l**3)
-            kbi[5][2] = 2 * e * ix / (l**2)
-            kbi[5][4] = - 6 * e * ix / (l**3)
-            kbi[5][5] = 4 * e * ix / (l**2)
+            kbi[5][1] = 6 * e * ix / (l**2)
+            kbi[5][2] = 2 * e * ix / (l)
+            kbi[5][4] = - 6 * e * ix / (l**2)
+            kbi[5][5] = 4 * e * ix / (l)
         
         else:
             #situação de barra rotulada / engastada
