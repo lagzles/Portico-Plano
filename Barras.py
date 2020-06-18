@@ -101,7 +101,7 @@ class Barras(object):
         
         if self.nf.apoio == 'engaste' or self.nf.apoio == False:
             # situação de barras engastadas em ambas extremidades
-            print('engaste/engaste')
+            # print('engaste/engaste')
             kbi[0][0] = e * a / l
             kbi[0][3] = - e * a / l
 
@@ -130,7 +130,7 @@ class Barras(object):
 
         elif self.get_nf().apoio == 'bi-articulado':
             # situação de barras articulada em ambas extremidades
-            print('bi-articulada')
+            # print('bi-articulada')
             kbi[0][0] = e * a / l
             kbi[0][3] = - e * a / l
 
@@ -139,7 +139,7 @@ class Barras(object):
 
         else:
             #situação de barra rotulada / engastada
-            print('engaste/rotulada')
+            # print('engaste/rotulada')
             kbi[0][0] = e * a / l
             kbi[0][3] = - e * a / l
 

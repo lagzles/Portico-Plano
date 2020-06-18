@@ -19,6 +19,7 @@ class Portico(object):
 		self.cumeeira = cumeeira
 		self.lista_nos = []
 		self.lista_barras = []
+		self.lista_bases = []
 		self.gdl = 0
 
 		self.carregamentos = []
@@ -48,7 +49,9 @@ class Portico(object):
     		
 
 	def AnaliseMatricial(self):
-		print('fazendo analise?????')
+		print('#'*20)
+		print()
+		print('Fazendo analise')
 		for carregamento in self.carregamentosELU:
 			# carregamentos nodais equivalentes de cada barra
 			carr = carregamento
@@ -97,20 +100,47 @@ class Portico(object):
 			ua = ka_inv.dot(fca)
 			fb = np.dot(kb, ua)
 
-			print('Reações de APOIO', len(fb))
+			grausReacoes = len(fb)
+			print(grausReacoes, len(ap))
+
+			for i in range(0,grausReacoes,3):
+				gdlX = ap[i]
+				gdlY = ap[i+1]
+				gdlZ = ap[i+2]
+
+				rx = fb[i]
+				ry = fb[i+1]
+				rz = fb[i+2]
+
+				for base in self.lista_bases:
+					baseGdlX = base.gx - 1
+					baseGdlY = base.gy - 1
+					baseGdlZ = base.gz - 1
+					# print(baseGdlX, gdlX)
+
+					if(baseGdlX == gdlX):
+						print('base')
+						base.reacoes =[rx,ry,rz]
+
+
+			print('Reações de APOIO')
 			print('X	Y	MZ')
-			print(round(fb[0],2), round(fb[1],2), round(fb[2],2))
-			print(round(fb[3],2), round(fb[4],2), round(fb[5],2))
-			print(round(fb[6],2), round(fb[7],2), round(fb[8],2))
-			print(round(fb[9],2), round(fb[10],2), round(fb[11],2))
-			print('\nsoma de verticais')
-			print(round(fb[1]+fb[4]+fb[7]+fb[10],2))
-			print('soma de esforços verticais\n',contador)
-			print('soma de vigas\n',contador2)
+			somaVerticais = 0
+			for base in self.lista_bases:
+				print(base)
+				base.printReacoes()
+				somaVerticais += base.reacoes[1]
+
+			print('\nsoma de Reacoes verticais', round(somaVerticais,2))
+			# print(round(fb[1]+fb[4]+fb[7]+fb[10],2))
+			print('soma de esforços verticais ',round(contador,2))
+
 
 	
 	def MontarMatrizRigidez(self):
-		print('montando matriz de rigidez do portico')
+		print('#'*20)
+		print()
+		print('Matriz de rigidez do portico')
 		k = np.zeros((self.gdl, self.gdl))
 		for barra in self.lista_barras:
 			barra.set_gdl(self.gdl)
@@ -132,6 +162,7 @@ class Portico(object):
 		self.ap = ap
 		self.k = k
 
+
 	def GerarDesenhoDXF(self):
 		barras = self.lista_barras
 		dwg.desenhar_portico(self, 'portico.dxf')
@@ -144,6 +175,10 @@ class Portico(object):
 
 	def GerarBarrasEPontos(self):
 		# numero de vaos
+		print('#'*20)
+		print()
+		print('Barras e Pontos')
+
 		n = len(self.lista_vaos)
 		# numero de pilares
 		np = n + 1
@@ -229,9 +264,9 @@ class Portico(object):
 				apoio = 'engaste'
 				print('e')
 			else:
-				# apoio = 'rotulado'
+				apoio = 'rotulado'
 				print('r')
-				apoio = 'bi-articulado'
+				# apoio = 'bi-articulado'
 				# apoio = 'engaste'
 
 			gx = gdl + 1
@@ -247,7 +282,8 @@ class Portico(object):
 					barraId = len(self.lista_barras)+1
 					coluna = br.Barras(no, nob, barraId, 1, 1, 'coluna')
 					self.lista_barras.append(coluna)
-
+					self.lista_bases.append(nob)
+		
 
 	def PontosIntermediariosDaViga(self, noi, vao, cota):
 		# no2
@@ -300,41 +336,4 @@ class Portico(object):
 			self.lista_nos.append(ptFim)
 
 		return ptFim
-
-
-	# # iteracao para lancar as vigas
-	# for i in range(len(pontos_viga)-1):
-	# 	# no2
-	# 	xb = pontos_viga[i][0]
-	# 	yb = pontos_viga[i][1]
-	# 	zb = pontos_viga[i][2]
-		
-	# 	# no4
-	# 	xt = pontos_viga[i+1][0]
-	# 	yt = pontos_viga[i+1][1]
-	# 	zt = pontos_viga[i+1][2]
-	# 	# divisão padrão do vão em 3 partes
-	# 	n = 3
-	# 	if (xt-xb) < 8000: # caso tenha um 'vao' menor que 8m, não dividir
-	# 		n = 1
-	# 		# situacao mais comum quando cumeeira esta no meio do vao
-	# 	if n != 1:
-	# 		# para divisao padrao do vao, em 3 partes
-	# 		for j in range(0, n):
-	# 			dx = (xt-xb) / n
-	# 			dz = (zt-zb) / n
-				
-	# 			ptInicio = (xb + dx * (j), yb, zb + dz*j)
-	# 			ptFim = (xb + dx * (j + 1), yt, zb + dz*(j+1))
-	# 			framing = criarFraming(ptInicio, ptFim, framingTypeSoldado)
-
-	# 			# condicionantes para definicao da altura da viga em cada ponto
-	# 			# por padrao o valor da altura eh de d_meio 
-	# 			# condicionantes para o ponto inicial
-				
-	# 	elif n == 1:
-	# 		ptInicio = (xb, yb, zb)
-	# 		ptFim = (xt, yt, zt)
-	# 		framing = criarFraming(ptInicio, ptFim, framingTypeSoldado)
-
 

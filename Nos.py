@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 
 class Nos(object):
@@ -16,9 +17,13 @@ class Nos(object):
         self.id = gz / 3
 
         self.apoio = apoio
+        self.reacoes = []
     
     def __str__(self):
         return "nó " + str(self.id)
+    
+    def printReacoes(self):
+        return print(round(self.reacoes[0],2), round(self.reacoes[1],2), round(self.reacoes[1],2))
     
     def get_x(self):
         return self.x
