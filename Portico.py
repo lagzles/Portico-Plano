@@ -2,6 +2,7 @@
 import Nos as ns
 import Barras as br
 import numpy as np
+from math import sin
 import desenhar as dwg
 
 class Portico(object):
@@ -52,6 +53,8 @@ class Portico(object):
 		print('#'*20)
 		print()
 		print('Fazendo analise')
+		self.MontarMatrizRigidez()
+
 		for carregamento in self.carregamentosELU:
 			# carregamentos nodais equivalentes de cada barra
 			carr = carregamento
@@ -63,17 +66,18 @@ class Portico(object):
 				if barra.tipo == 'viga':
 					mz = (carr * (barra.comprimento() ** 2) ) / 12.
 					fy = (carr * barra.comprimento()) / 2.
-					fx = 0
-					fbi = np.zeros((6))
-					fbi[0] = round(fx,2)
-					fbi[1] = round(fy,2)
-					fbi[2] = round(mz,2)
-					fbi[3] = round(fx,2)
-					fbi[4] = round(fy,2)
-					fbi[5] = round(-mz,2)
+					fx = fy * round(sin(barra.theta),4)
+					
+					fboi = np.zeros((6))
+					fboi[0] = round(fx,2)
+					fboi[1] = round(fy,2)
+					fboi[2] = round(mz,2)
+					fboi[3] = round(fx,2)
+					fboi[4] = round(fy,2)
+					fboi[5] = round(-mz,2)
 
-					barra.fbi = fbi
-					foi = fbi
+					barra.fboi = fboi
+					foi = np.dot(np.transpose(barra.ti), fboi)
 
 					fci = np.dot(np.transpose(barra.li), foi)
 					# print('fci \n', fci)
@@ -85,9 +89,8 @@ class Portico(object):
 			ap = self.ap
 			liv = self.liv
 			k = self.k
-			# print('ap', ap)
-			# print('liv', liv)
-			# print('k', k)
+			print(np.linalg.det(k))
+			print(self.gdl, len(ap), len(liv))
 
 			ka = np.delete(np.delete(k, ap, axis=0), ap, axis=1)
 			kb = np.delete(np.delete(k, liv, axis=0), ap, axis=1)
@@ -96,21 +99,21 @@ class Portico(object):
 			foa = np.delete(fo, ap, axis=0)
 
 			fca = fa - foa
+			print(fca)
 
-			ua = ka_inv.dot(fca)
+
+			ua = np.dot(ka_inv, (fa - foa))
 			fb = np.dot(kb, ua)
 
 			grausReacoes = len(fb)
-			print(grausReacoes, len(ap))
+			print(fb)
 
-			for i in range(0,grausReacoes,3):
-				gdlX = ap[i]
-				gdlY = ap[i+1]
-				gdlZ = ap[i+2]
+			for barra in self.lista_barras:
+				barra.esforcos_nodais([ua], liv)
 
-				rx = fb[i]
-				ry = fb[i+1]
-				rz = fb[i+2]
+			for i in range(0,grausReacoes):
+				grauApoio = ap[i]
+				reacao = fb[i]
 
 				for base in self.lista_bases:
 					baseGdlX = base.gx - 1
@@ -118,22 +121,31 @@ class Portico(object):
 					baseGdlZ = base.gz - 1
 					# print(baseGdlX, gdlX)
 
-					if(baseGdlX == gdlX):
-						print('base')
-						base.reacoes =[rx,ry,rz]
+					if(baseGdlX == grauApoio):
+						base.rx = reacao
+					if(baseGdlY == grauApoio):
+						base.ry = reacao
+					if(baseGdlZ == grauApoio):
+						base.mz = reacao
 
 
 			print('Reações de APOIO')
 			print('X	Y	MZ')
 			somaVerticais = 0
 			for base in self.lista_bases:
-				print(base)
+				# print(base)
 				base.printReacoes()
-				somaVerticais += base.reacoes[1]
+				somaVerticais += base.ry
+			
+			for base in self.lista_bases:
+				print(base.x, base.y)
 
-			print('\nsoma de Reacoes verticais', round(somaVerticais,2))
-			# print(round(fb[1]+fb[4]+fb[7]+fb[10],2))
-			print('soma de esforços verticais ',round(contador,2))
+			# print('\nsoma de Reacoes verticais', round(somaVerticais,2))
+			# print('soma de esforços verticais ',round(contador,2))
+
+			# print('Esforços nodais das barras')
+			# for barra in self.lista_barras:
+			# 	print(barra.id,[[barra.ni.x, barra.ni.y], [barra.nf.x, barra.nf.y]] , barra.fbi)
 
 
 	
@@ -154,13 +166,25 @@ class Portico(object):
 				liv = liv + [no.gy -1]
 				liv = liv + [no.gz -1]
 			else:
-				ap = ap + [no.gx -1]
-				ap = ap + [no.gy -1]
-				ap = ap + [no.gz -1]
+				if no.apoio == 'engaste':
+					ap = ap + [no.gx -1]
+					ap = ap + [no.gy -1]
+					ap = ap + [no.gz -1]
+
+				else:#if no.apoio == 'bi-articulado':
+					ap = ap + [no.gx - 1]
+					ap = ap + [no.gy -1]
+					# ap = ap + [no.gz - 1]
+
+					# liv = liv + [no.gx - 1]
+					liv = liv + [no.gz - 1]
 		
 		self.liv = liv
 		self.ap = ap
 		self.k = k
+
+		print('liv',liv)
+		print('ap',ap)
 
 
 	def GerarDesenhoDXF(self):

@@ -17,13 +17,20 @@ class Nos(object):
         self.id = gz / 3
 
         self.apoio = apoio
+        self.rx = 0
+        self.ry = 0
+        self.mz = 0
         self.reacoes = []
     
     def __str__(self):
         return "nó " + str(self.id)
     
     def printReacoes(self):
-        return print(round(self.reacoes[0],2), round(self.reacoes[1],2), round(self.reacoes[1],2))
+        if 1 > 0:
+            return print(round(self.rx,2), round(self.ry,2), round(self.mz,2))
+        else:
+            return print(['not',0])
+
     
     def get_x(self):
         return self.x

@@ -4,12 +4,13 @@ def desenhar_portico(portico, filename):
     dwg = dxf.drawing(filename)
 
     for barra in portico.lista_barras:
-        pi = [barra.ni.x*1, barra.ni.y*1]
-        pf = [barra.nf.x*1, barra.nf.y*1]
+        pi = [barra.ni.x*100, barra.ni.y*100]
+        pf = [barra.nf.x*100, barra.nf.y*100]
         desenhar_linhas(dwg, pi, pf)
     
     if dwg != None:
         dwg.save()
+
 
 def desenhar_linhas(dwg, ponto_i, ponto_f):
     line = dxf.line(start=ponto_i, end=ponto_f)

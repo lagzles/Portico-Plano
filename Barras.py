@@ -9,11 +9,13 @@ class Barras(object):
         self.e = 20000.0 * 100.0 #kN/cm2 * 100 => kgf/cm2
         self.fy = 3450 #kgf/cm2
         self.fu = 4150 #kgf/cm2
+        self.id = id
 
         self.gdl = nf.gz # gdl # graus de liberdade
         self.compressao = 0
         self.tracao = 0
         self.tipo = tipo
+        self.fboi = np.zeros((6))
 
         # definição das seções iniciais para as barras
         secao = 'soldado'
@@ -102,6 +104,8 @@ class Barras(object):
         if self.nf.apoio == 'engaste' or self.nf.apoio == False:
             # situação de barras engastadas em ambas extremidades
             # print('engaste/engaste')
+            if self.nf.y == 0:
+                print('engaste', self.nf.gx-1, self.nf.gy-1, self.nf.gz-1, 0)
             kbi[0][0] = e * a / l
             kbi[0][3] = - e * a / l
 
@@ -130,7 +134,7 @@ class Barras(object):
 
         elif self.get_nf().apoio == 'bi-articulado':
             # situação de barras articulada em ambas extremidades
-            # print('bi-articulada')
+            print('bi-articulada', self.nf.gy-1, self.nf.y)
             kbi[0][0] = e * a / l
             kbi[0][3] = - e * a / l
 
@@ -140,6 +144,9 @@ class Barras(object):
         else:
             #situação de barra rotulada / engastada
             # print('engaste/rotulada')
+            if self.nf.y == 0:
+                print('rotulado', self.nf.gx-1, self.nf.gy-1, 0)
+                print(self.ni.apoio)
             kbi[0][0] = e * a / l
             kbi[0][3] = - e * a / l
 
@@ -226,7 +233,7 @@ class Barras(object):
             kli_u = np.dot(ki_li, u)
             fbi = kli_u
 
-            self.fbi = fbi
+            self.fbi = fbi + self.fboi
             self.compressao = max(2*fbi[0], self.compressao)
             self.tracao = min(2*fbi[0], self.tracao)
 

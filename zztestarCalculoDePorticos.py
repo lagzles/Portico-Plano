@@ -1,9 +1,9 @@
 from Portico import Portico
 
 
-vaos = [20,20,25]
+vaos = [20,25,25]
 pd = 10
-cumeeira = 40
+cumeeira = 45
 inc = 3
 influencia = 10.000
 
@@ -16,5 +16,7 @@ carregamentos.append(carr1)
 # carregamentos.append( carr2)
 
 portico.SetarCarregamentos(carregamentos)
-portico.MontarMatrizRigidez()
+# portico.MontarMatrizRigidez()
 portico.AnaliseMatricial()
+
+portico.GerarDesenhoDXF()
