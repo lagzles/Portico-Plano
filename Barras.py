@@ -2,11 +2,12 @@ import numpy as np
 import math as m
 import secao_002 as section
 
+
 class Barras(object):
     def __init__(self, ni, nf, id, kx, ky, tipo):
         self.ni = ni
         self.nf = nf
-        self.e = 20000.0 * 100.0 #kN/cm2 * 100 => kgf/cm2
+        self.e = 20000.0 * 100.0 / 10000 #kN/cm2 * 100 => kgf/cm2
         self.fy = 3450 #kgf/cm2
         self.fu = 4150 #kgf/cm2
         self.id = id
@@ -19,10 +20,10 @@ class Barras(object):
 
         # definição das seções iniciais para as barras
         secao = 'soldado'
-        d = 75
-        tw = 0.675
-        bf = 17.5
-        tf = 0.635
+        d = 75.0 / 100.0
+        tw = 0.635 / 100.0
+        bf = 17.5 / 100.0
+        tf = 0.635 / 100.0
 
         # seção default para barras
         self.section = section.Section(secao, d, bf, tw, tf, self.e, self.fy)
@@ -97,15 +98,16 @@ class Barras(object):
         e = self.e
         a = self.section.get_area()
         ix = self.section.get_ix()
+        # print(a, ix)
         l = self.comprimento()
         theta = self.theta
         kbi = np.zeros((6, 6))
-        
-        if self.nf.apoio == 'engaste' or self.nf.apoio == False:
+
+        if self.ni.apoio == 'engaste' or self.ni.apoio == False:
             # situação de barras engastadas em ambas extremidades
             # print('engaste/engaste')
-            if self.nf.y == 0:
-                print('engaste', self.nf.gx-1, self.nf.gy-1, self.nf.gz-1, 0)
+            # if self.ni.y == 0:
+            #     print('engaste gx/gy/gz', self.ni.gx-1, self.ni.gy-1, self.ni.gz-1)
             kbi[0][0] = e * a / l
             kbi[0][3] = - e * a / l
 
@@ -132,31 +134,59 @@ class Barras(object):
             kbi[5][4] = - 6 * e * ix / (l**2)
             kbi[5][5] = 4 * e * ix / (l)
 
-        elif self.get_nf().apoio == 'bi-articulado':
+        elif self.get_ni().apoio == 'bi-articulado':
             # situação de barras articulada em ambas extremidades
-            print('bi-articulada', self.nf.gy-1, self.nf.y)
+            # print('bi-articulada gy', self.ni.gy-1, self.ni.y)
             kbi[0][0] = e * a / l
             kbi[0][3] = - e * a / l
 
             kbi[3][0] = - e * a / l
             kbi[3][3] = e * a / l
+        
+        elif self.get_ni().apoio == 'rotuladoInicial':
+            # if self.ni.y == 0:
+            #     print('Rotulado inicial gx/gy', self.ni.gx-1, self.ni.gy-1)
+            kbi[0][0] = e * a / l
+            kbi[0][3] = - e * a / l
 
-        else:
-            #situação de barra rotulada / engastada
-            # print('engaste/rotulada')
-            if self.nf.y == 0:
-                print('rotulado', self.nf.gx-1, self.nf.gy-1, 0)
-                print(self.ni.apoio)
+            kbi[1][1] = 3 * e * ix / (l**3)
+            kbi[1][2] = 0
+            kbi[1][4] = - 3 * e * ix / (l**3)
+            kbi[1][5] = 3 * e * ix / (l**2)
+
+            kbi[2][1] = 0
+            kbi[2][2] = 0
+            kbi[2][4] = 0
+            kbi[2][5] = 0
+
+            kbi[3][0] = - e * a / l
+            kbi[3][3] = e * a / l
+
+            kbi[4][1] = - 3 * e * ix / (l**3)
+            kbi[4][2] = 0
+            kbi[4][4] = 3 * e * ix / (l**3)
+            kbi[4][5] = - 3 * e * ix / (l**2)
+
+            kbi[5][1] = 3 * e * ix / (l**2)
+            kbi[5][2] = 0
+            kbi[5][4] = - 3 * e * ix / (l**2)
+            kbi[5][5] = - 3 * e * ix / (l)
+
+        elif self.get_nf().apoio == 'rotuladoFinal':
+            # if self.nf.y == 0:
+            #     print('Rotulado Final gx/gy', self.ni.gx-1, self.ni.gy-1)
             kbi[0][0] = e * a / l
             kbi[0][3] = - e * a / l
 
             kbi[1][1] = 3 * e * ix / (l**3)
             kbi[1][2] = 3 * e * ix / (l**2)
             kbi[1][4] = - 3 * e * ix / (l**3)
+            kbi[1][5] = 0
 
             kbi[2][1] = 3 * e * ix / (l**2)
             kbi[2][2] = 3 * e * ix / (l**1)
             kbi[2][4] = - 3 * e * ix / (l**2)
+            kbi[2][5] = 0
 
             kbi[3][0] = - e * a / l
             kbi[3][3] = e * a / l
@@ -164,6 +194,12 @@ class Barras(object):
             kbi[4][1] = - 3 * e * ix / (l**3)
             kbi[4][2] = - 3 * e * ix / (l**2)
             kbi[4][4] = 3 * e * ix / (l**3)
+            kbi[4][5] = 0
+
+            kbi[5][1] = 0
+            kbi[5][2] = 0
+            kbi[5][4] = 0
+            kbi[5][5] = 0
 
         self.kbi = kbi
         
@@ -189,7 +225,10 @@ class Barras(object):
         a = np.transpose(ti_t)        
         b = np.dot(a, kbi)
         c = np.dot(b, ti_t)
-        self.ki = c #ki
+
+        aa = np.dot(kbi, ti_t)
+        bb = np.dot(a, aa)
+        self.ki = bb #  c #ki
 
 
     def set_kci(self):

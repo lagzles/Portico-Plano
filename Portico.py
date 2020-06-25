@@ -5,6 +5,7 @@ import numpy as np
 from math import sin
 import desenhar as dwg
 
+
 class Portico(object):
 			
 	def __init__(self, lista_vaos, pe_direito, cumeeira, inclinacao, influencia):
@@ -33,7 +34,7 @@ class Portico(object):
 
 		print('vaos', lista_vaos)
 		print('cumeeira', cumeeira)
-		print('inclinacao', inclinacao)
+		# print('inclinacao', inclinacao)
 
 		self.GerarBarrasEPontos()
 		self.DefinirGDL()
@@ -52,7 +53,7 @@ class Portico(object):
 	def AnaliseMatricial(self):
 		print('#'*20)
 		print()
-		print('Fazendo analise')
+		print('Fazendo analise\n')
 		self.MontarMatrizRigidez()
 
 		for carregamento in self.carregamentosELU:
@@ -60,13 +61,25 @@ class Portico(object):
 			carr = carregamento
 			fa = np.zeros((len(self.liv)))
 			fo = np.zeros((self.gdl))
+			fo1 = np.zeros((self.gdl))
+
+			# print('gdl  /  ap  /  liv  /  k  ')
+			# print(self.gdl, len(self.ap), len(self.liv), self.k.shape)
+
 			contador = 0
 			contador2 = 0
 			for barra in self.lista_barras:
 				if barra.tipo == 'viga':
 					mz = (carr * (barra.comprimento() ** 2) ) / 12.
-					fy = (carr * barra.comprimento()) / 2.
+					fy = (carr * barra.lb) / 2.
 					fx = fy * round(sin(barra.theta),4)
+
+					fo1[barra.ni.gx-1] += fx
+					fo1[barra.ni.gy-1] += fy
+					fo1[barra.ni.gz-1] += mz
+					fo1[barra.nf.gx-1] += fx
+					fo1[barra.nf.gy-1] += fy
+					fo1[barra.nf.gz-1] += - mz
 					
 					fboi = np.zeros((6))
 					fboi[0] = round(fx,2)
@@ -77,36 +90,44 @@ class Portico(object):
 					fboi[5] = round(-mz,2)
 
 					barra.fboi = fboi
+					# foi = np.dot(np.dot(np.transpose(barra.ti), fboi), barra.ti)
 					foi = np.dot(np.transpose(barra.ti), fboi)
 
 					fci = np.dot(np.transpose(barra.li), foi)
-					# print('fci \n', fci)
 
 					fo = fo + fci
-					contador += fy*2
+					contador += fy * 2
 					contador2 += 1
+
+			fo = fo1
 
 			ap = self.ap
 			liv = self.liv
 			k = self.k
-			print(np.linalg.det(k))
-			print(self.gdl, len(ap), len(liv))
 
+			# print(ka)
+			foa = np.delete(fo, ap, axis=0)
+			fca = fa - foa
+			
 			ka = np.delete(np.delete(k, ap, axis=0), ap, axis=1)
 			kb = np.delete(np.delete(k, liv, axis=0), ap, axis=1)
 
+			det = np.linalg.det(ka)
+			for no in self.lista_nos:
+				print('nó', no, [no.x, no.y], no.apoio)
+			for barra in self.lista_barras:
+				print('barra',barra.id, [barra.ni.x, barra.ni.y], barra.ni.apoio, [barra.nf.x, barra.nf.y], barra.nf.apoio)
+
+			if det == 0:
+				print('Determinante de Ka = 0, matriz singular. Não pode')
+				break
 			ka_inv = np.linalg.inv(ka)
-			foa = np.delete(fo, ap, axis=0)
 
-			fca = fa - foa
-			print(fca)
-
-
+			# deslocamentos nós livres
 			ua = np.dot(ka_inv, (fa - foa))
 			fb = np.dot(kb, ua)
 
 			grausReacoes = len(fb)
-			print(fb)
 
 			for barra in self.lista_barras:
 				barra.esforcos_nodais([ua], liv)
@@ -128,8 +149,7 @@ class Portico(object):
 					if(baseGdlZ == grauApoio):
 						base.mz = reacao
 
-
-			print('Reações de APOIO')
+			print('\nReações de APOIO')
 			print('X	Y	MZ')
 			somaVerticais = 0
 			for base in self.lista_bases:
@@ -137,8 +157,8 @@ class Portico(object):
 				base.printReacoes()
 				somaVerticais += base.ry
 			
-			for base in self.lista_bases:
-				print(base.x, base.y)
+			# for base in self.lista_bases:
+			# 	print(base.x, base.y)
 
 			# print('\nsoma de Reacoes verticais', round(somaVerticais,2))
 			# print('soma de esforços verticais ',round(contador,2))
@@ -147,13 +167,13 @@ class Portico(object):
 			# for barra in self.lista_barras:
 			# 	print(barra.id,[[barra.ni.x, barra.ni.y], [barra.nf.x, barra.nf.y]] , barra.fbi)
 
-
 	
 	def MontarMatrizRigidez(self):
-		print('#'*20)
-		print()
-		print('Matriz de rigidez do portico')
+		# print('#'*20)
+		# print()
+		# print('Matriz de rigidez do portico')
 		k = np.zeros((self.gdl, self.gdl))
+
 		for barra in self.lista_barras:
 			barra.set_gdl(self.gdl)
 			k = k + barra.get_kci()
@@ -165,43 +185,59 @@ class Portico(object):
 				liv = liv + [no.gx -1]
 				liv = liv + [no.gy -1]
 				liv = liv + [no.gz -1]
+
 			else:
 				if no.apoio == 'engaste':
 					ap = ap + [no.gx -1]
 					ap = ap + [no.gy -1]
 					ap = ap + [no.gz -1]
 
-				else:#if no.apoio == 'bi-articulado':
+				elif no.apoio == 'rotuladoInicial' or no.apoio == "rotuladoFinal":#if no.apoio == 'bi-articulado':
 					ap = ap + [no.gx - 1]
-					ap = ap + [no.gy -1]
+					ap = ap + [no.gy - 1]
 					# ap = ap + [no.gz - 1]
-
 					# liv = liv + [no.gx - 1]
 					liv = liv + [no.gz - 1]
+
+				elif no.apoio == 'bi-articulado':
+					ap = ap + [no.gx - 1]
+					ap = ap + [no.gy - 1]
+					# liv = liv + [no.gx - 1]
+					liv = liv + [no.gz - 1]
+					# ap = ap + [no.gz - 1]
+
+				# else:#if no.apoio == 'bi-articulado':
+				# 	ap = ap + [no.gx - 1]
+				# 	ap = ap + [no.gy - 1]
+				# 	ap = ap + [no.gz - 1]
+				# 	# liv = liv + [no.gx - 1]
+				# 	# liv = liv + [no.gz - 1]
 		
 		self.liv = liv
 		self.ap = ap
 		self.k = k
 
-		print('liv',liv)
-		print('ap',ap)
+		# print('liv',liv)
+		# print('ap',ap)
 
 
 	def GerarDesenhoDXF(self):
 		barras = self.lista_barras
 		dwg.desenhar_portico(self, 'portico.dxf')
 
+
 	def DefinirGDL(self):
 		numeroNos = len(self.lista_nos)
-		print('gdls')
-		print(numeroNos*3, self.gdl)
+		# print('gdls')
+		# print(numeroNos*3, self.gdl)
 		maiorGdl = 0
 
+
 	def GerarBarrasEPontos(self):
-		# numero de vaos
-		print('#'*20)
-		print()
-		print('Barras e Pontos')
+		# # numero de vaos
+		# print('#'*20)
+		# print()
+		# print('Barras e Pontos')
 
 		n = len(self.lista_vaos)
 		# numero de pilares
@@ -274,7 +310,6 @@ class Portico(object):
 
 			nof = self.PontosIntermediariosDaViga(noi, vao, cota)
 
-			# print('pti / ptf', noi.x, nof.x)
 
 		# lançar nós das bases e barras das colunas, no objeto Portico
 		for ponto in pontos_base:
@@ -284,13 +319,15 @@ class Portico(object):
 			
 			pontoIndex = pontos_base.index(ponto)
 
+			# ponto inicial tera propriedade apoio diferente de False
 			if pontoIndex == 0 or pontoIndex == (len(pontos_base)-1):
+				# print('e')
 				apoio = 'engaste'
-				print('e')
 			else:
-				apoio = 'rotulado'
-				print('r')
-				# apoio = 'bi-articulado'
+				# print('r')
+				# apoio = 'rotuladoInicial'
+				# apoio = 'rotuladoFinal'
+				apoio = 'bi-articulado'
 				# apoio = 'engaste'
 
 			gx = gdl + 1
@@ -304,7 +341,8 @@ class Portico(object):
 			for no in self.lista_nos:
 				if no.x == nob.x and no.y != 0:
 					barraId = len(self.lista_barras)+1
-					coluna = br.Barras(no, nob, barraId, 1, 1, 'coluna')
+					# no.apoio = 'topo'
+					coluna = br.Barras(nob, no, barraId, 1, 1, 'coluna')
 					self.lista_barras.append(coluna)
 					self.lista_bases.append(nob)
 		
@@ -319,7 +357,7 @@ class Portico(object):
 		yt = cota
 
 		# divisão padrão do vão em 3 partes
-		n = 3
+		n = 1#3
 		if (xt-xb) < 8.000: # caso tenha um 'vao' menor que 8m, não dividir
 			n = 1
 			# situacao mais comum quando cumeeira esta no meio do vao
