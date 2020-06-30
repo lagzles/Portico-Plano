@@ -3,19 +3,21 @@ from Portico import Portico
 print('\n hhh'*4)
 print('começando rotina teste')
 
-vaos = [5,10]
+vaos = [25,25,25,30]
 pd = 10
-cumeeira = 5
+cumeeira = 50
 inc = 3
 influencia = 10.000
 
 portico = Portico(vaos, pd, cumeeira, inc, influencia)
 
 carregamentos = []
-carr1 = ['ultimo', 10]
-# carr2 = ['ultimo', -10]
+carr1 = ['cp', 10, 0]
+carr2 = ['cv 0', -10, +10]
+
 carregamentos.append(carr1)
-# carregamentos.append( carr2)
+carregamentos.append(carr2)
+carregamentos.append(carr3)
 
 portico.SetarCarregamentos(carregamentos)
 portico.AnaliseMatricial()

@@ -15,6 +15,11 @@ class Barras(object):
         self.gdl = nf.gz # gdl # graus de liberdade
         self.compressao = 0
         self.tracao = 0
+        self.cortanteInicio = []
+        self.momentoInicio = []
+        self.cortanteFinal = []
+        self.momentoFinal = []
+
         self.tipo = tipo
         self.fboi = np.zeros((6))
 
@@ -103,7 +108,7 @@ class Barras(object):
         theta = self.theta
         kbi = np.zeros((6, 6))
 
-        if self.ni.apoio == 'engaste' or self.ni.apoio == False:
+        if True: #self.ni.apoio == 'engaste' or self.ni.apoio == False:
             # situação de barras engastadas em ambas extremidades
             # print('engaste/engaste')
             # if self.ni.y == 0:
@@ -255,7 +260,7 @@ class Barras(object):
     # 1 - FIM
     ######################################################
 
-    def esforcos_nodais(self, ua_list, liv):
+    def esforcos_nodais(self, tipoCarregamento, ua_list, liv):
         # gdl graus de liberdade do sistema
         # matriz de deslocamentos nodais
         # matriz com graus de liberdade livres
@@ -273,8 +278,12 @@ class Barras(object):
             fbi = kli_u
 
             self.fbi = fbi + self.fboi
-            self.compressao = max(2*fbi[0], self.compressao)
-            self.tracao = min(2*fbi[0], self.tracao)
+            self.compressao = self.compreesao + [tipoCarregamento, round(1*self.fbi[0],2)]
+            self.tracao = self.tracao + [tipoCarregamento, round(1*self.fbi[0],2), self.tracao]
+            self.cortanteInicio = self.cortanteInicio + [tipoCarregamento,  round(abs(1*self.fbi[1]),2)]
+            self.momentoInicio = self.momentoInicio+ [tipoCarregamento,  round(abs(1*self.fbi[2]),2)]
+            self.cortanteFinal = self.cortanteFinal + [tipoCarregamento,  round(abs(1*self.fbi[4]),2)]
+            self.momentoFinal = self.momentoFinal + [tipoCarregamento, round(abs(1*self.fbi[5]),2)]
 
 
     def set_kx(self, kx):
