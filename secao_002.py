@@ -13,7 +13,7 @@ class Section():
         self.tfs = tf
         self.tfi = tf
         self.e = e
-        self.g = 77000.0
+        self.g = 7851813200.0 # kgf/m2 = 77000.0 MPa
         self.fy = fy
         
         self.set_propriedades()
@@ -94,7 +94,7 @@ class Section():
 
 
     def set_peso_linear(self):
-        self.peso_linear = ((self.get_area() / 10000) * 7850)
+        self.peso_linear = ((self.get_area() / 1) * 7850)
         return self.peso_linear
 
     ###################################
