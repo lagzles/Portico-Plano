@@ -56,60 +56,75 @@ class Portico(object):
 		print()
 		print('Fazendo analise\n')
 		self.MontarMatrizRigidez()
-		self.ua = []
+		self.ua = {}
 		for barra in self.lista_barras:
-			barra.compressao = []
-			barra.tracao = []
-			barra.cortanteInicio = []
-			barra.momentoInicio = []
-			barra.cortanteFinal = []
-			barra.momentoFinal = []
+			barra.fboi = {}
+			# barra.compressao = {}
+			barra.normal = {}
+			barra.cortanteInicio = {}
+			barra.momentoInicio = {}
+			barra.cortanteFinal = {}
+			barra.momentoFinal = {}
 
 		for tipoCarr, carregamento in self.carregamentos:
 			# carregamentos nodais equivalentes de cada barra
-			carrViga = carregamento[0]
-			carrColuna = carregamento[1]
+			# agua esquerda = carregamento[0]
+			# agua direita = carregamento[1]
+			# coluna esquerda = carregamento[2]
+			# coluna direita = carregamento[3]
+			oitao = sum(self.lista_vaos)
 			fa = np.zeros((len(self.liv)))
 			fo = np.zeros((self.gdl))
 			fo1 = np.zeros((self.gdl))
 
-			# print('gdl  /  ap  /  liv  /  k  ')
-			# print(self.gdl, len(self.ap), len(self.liv), self.k.shape)
-
-			contador = 0
-			contador2 = 0
 			for barra in self.lista_barras:
 				if barra.tipo == 'viga':
-					mz = (carrViga * (barra.comprimento() ** 2) ) / 12.
-					fy = (carrViga * barra.lb) / 2.
-					fx = fy * round(sin(barra.theta),4)
+					yi = barra.ni.y
+					yf = barra.nf.y
+					if (yi-yf) < 0: # vigas da agua da esquerda
+						carr = carregamento[0]
+					else: # vigas da agua da direita
+						carr = carregamento[1]
+					# mz = (carr * (barra.comprimento() ** 2) ) / 12.
+					# fy = (carr * barra.comprimento() ) / 2.
+					# fx = 0*fy * round(sin(barra.theta),4)
 
-					fo1[barra.ni.gx-1] += fx
-					fo1[barra.ni.gy-1] += fy
-					fo1[barra.ni.gz-1] += mz
-					fo1[barra.nf.gx-1] += fx
-					fo1[barra.nf.gy-1] += fy
-					fo1[barra.nf.gz-1] += - mz
-					
-					fboi = np.zeros((6))
-					fboi[0] = round(fx,2)
-					fboi[1] = round(fy,2)
-					fboi[2] = round(mz,2)
-					fboi[3] = round(fx,2)
-					fboi[4] = round(fy,2)
-					fboi[5] = round(-mz,2)
+				elif barra.tipo == 'coluna-externa':
+					colunaX = barra.ni.x
+					if colunaX == 0: # coluna externa da esquerda
+						carr = carregamento[2]
+					else: # coluna externa da direita
+						carr = carregamento[3]
+					# mz = (carr * (barra.comprimento() ** 2) ) / 12.
+					# fy = (carr * barra.comprimento() ) / 2.
+					# fx = 0*fy * round(sin(barra.theta),4)
 
-					barra.fboi = fboi
-					# foi = np.dot(np.dot(np.transpose(barra.ti), fboi), barra.ti)
-					foi = np.dot(np.transpose(barra.ti), fboi)
+				else: # colunas internas
+					carr = 0
+				
+				mz = (carr * (barra.comprimento() ** 2) ) / 12.
+				fy = (carr * barra.comprimento() ) / 2.
+				fx = 0*fy * round(sin(barra.theta),4)
 
-					fci = np.dot(np.transpose(barra.li), foi)
+				# esforços nodais no sistema local da barra
+				fboi = np.zeros((6))
+				fboi[0] = round(fx,2)
+				fboi[1] = round(fy,2)
+				fboi[2] = round(mz,2)
+				fboi[3] = round(fx,2)
+				fboi[4] = round(fy,2)
+				fboi[5] = round(-mz,2)
 
-					fo = fo + fci
-					contador += fy * 2
-					contador2 += 1
+				barra.fboi[tipoCarr] = fboi
 
-			fo = fo1
+				# foi = np.dot(np.dot(np.transpose(barra.ti), fboi), barra.ti)
+				ti_transposta = np.transpose(barra.ti)
+				foi = np.dot(ti_transposta, fboi)
+
+				li_transposta = np.transpose(barra.li)
+				fci = np.dot(li_transposta, foi)
+
+				fo = fo + fci
 
 			ap = self.ap
 			liv = self.liv
@@ -131,15 +146,15 @@ class Portico(object):
 
 
 			# deslocamentos nós livres
-			ua = np.dot(ka_inv, (fa - foa))
+			ua = np.dot(ka_inv, fca)
 			fb = np.dot(kb, ua)
 
-			self.ua = self.ua + [tipoCarr, ua]
+			self.ua[tipoCarr] = ua
 
 			grausReacoes = len(fb)
 
 			for barra in self.lista_barras:
-				barra.esforcos_nodais(tipoCarr,[ua], liv)
+				barra.esforcos_nodais(tipoCarr,[ua], liv, fo)
 
 			for i in range(0,grausReacoes):
 				grauApoio = ap[i]
@@ -150,37 +165,30 @@ class Portico(object):
 					baseGdlY = base.gy - 1
 					baseGdlZ = base.gz - 1
 					# print(baseGdlX, gdlX)
+					baseApoio = base.apoio
+					if baseApoio == "engaste":
+						if(baseGdlX == grauApoio):
+							# base.rx = reacao
+							base.rx[tipoCarr] = reacao + fo[baseGdlX]
+						if(baseGdlY == grauApoio):
+							# base.ry = reacao
+							base.ry[tipoCarr] = reacao + fo[baseGdlY]
+						if(baseGdlZ == grauApoio):
+							# base.mz = reacao
+							base.mz[tipoCarr] = reacao + fo[baseGdlZ]
+					elif baseApoio == "bi-articulado":
+						base.mz[tipoCarr] = 0.0 + fo[baseGdlZ]
+						base.rx[tipoCarr] = 0.0 + fo[baseGdlX]
+						if(baseGdlY == grauApoio):
+    							# base.ry = reacao
+							base.ry[tipoCarr] = reacao + fo[baseGdlY]
 
-					if(baseGdlX == grauApoio):
-						base.rx = reacao
-					if(baseGdlY == grauApoio):
-						base.ry = reacao
-					if(baseGdlZ == grauApoio):
-						base.mz = reacao
-
-			print('\nReações de APOIO')
-			print('X	Y	MZ')
-			somaVerticais = 0
-			for base in self.lista_bases:
-				# print(base)
-				base.printReacoes()
-				somaVerticais += base.ry
-			print('\n')
-
-			for barra in self.lista_barras:
-				barra.esforcos_nodais([ua], liv)
-				print(barra.compressao, barra.tracao, barra.momento)
-				print(barra.id, barra.fbi)
-
-			# for base in self.lista_bases:
-			# 	print(base.x, base.y)
-
-			# print('\nsoma de Reacoes verticais', round(somaVerticais,2))
-			# print('soma de esforços verticais ',round(contador,2))
-
-			# print('Esforços nodais das barras')
-			# for barra in self.lista_barras:
-			# 	print(barra.id,[[barra.ni.x, barra.ni.y], [barra.nf.x, barra.nf.y]] , barra.fbi)
+		print('\nReações de APOIO')
+		print('Car	RX	RY	RMZ')
+		for no in self.lista_bases:
+			# print(base)
+			no.printReacoes()
+		print('\n')
 
 	
 	def MontarMatrizRigidez(self):
@@ -207,7 +215,7 @@ class Portico(object):
 					ap = ap + [no.gy -1]
 					ap = ap + [no.gz -1]
 
-				elif no.apoio == 'rotuladoInicial' or no.apoio == "rotuladoFinal":#if no.apoio == 'bi-articulado':
+				elif no.apoio == 'rotuladoInicial' or no.apoio == "rotuladoFinal":
 					ap = ap + [no.gx - 1]
 					ap = ap + [no.gy - 1]
 					# ap = ap + [no.gz - 1]
@@ -221,19 +229,9 @@ class Portico(object):
 					liv = liv + [no.gz - 1]
 					# ap = ap + [no.gz - 1]
 
-				# else:#if no.apoio == 'bi-articulado':
-				# 	ap = ap + [no.gx - 1]
-				# 	ap = ap + [no.gy - 1]
-				# 	ap = ap + [no.gz - 1]
-				# 	# liv = liv + [no.gx - 1]
-				# 	# liv = liv + [no.gz - 1]
-		
 		self.liv = liv
 		self.ap = ap
 		self.k = k
-
-		# print('liv',liv)
-		# print('ap',ap)
 
 
 	def GerarDesenhoDXF(self):
@@ -332,12 +330,14 @@ class Portico(object):
 			y = ponto[1]
 			gdl = self.gdl
 			
+			coluna = 'coluna'
 			pontoIndex = pontos_base.index(ponto)
 
 			# ponto inicial tera propriedade apoio diferente de False
 			if pontoIndex == 0 or pontoIndex == (len(pontos_base)-1):
 				# print('e')
 				apoio = 'engaste'
+				coluna = 'coluna-externa'
 				# apoio = 'rotuladoInicial'
 			else:
 				# print('r')
@@ -358,7 +358,7 @@ class Portico(object):
 				if no.x == nob.x and no.y != 0:
 					barraId = len(self.lista_barras)+1
 					# no.apoio = 'topo'
-					coluna = br.Barras(nob, no, barraId, 1, 1, 'coluna')
+					coluna = br.Barras(nob, no, barraId, 1, 1, coluna)
 					self.lista_barras.append(coluna)
 					self.lista_bases.append(nob)
 		
