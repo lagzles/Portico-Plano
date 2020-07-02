@@ -7,28 +7,30 @@ class Barras(object):
     def __init__(self, ni, nf, id, kx, ky, tipo):
         self.ni = ni
         self.nf = nf
-        self.e = 20000.0 * 100.0 / 10000 #kN/cm2 * 100 => kgf/cm2
-        self.fy = 3450 #kgf/cm2
-        self.fu = 4150 #kgf/cm2
+        self.e = 20394320000.0  #kgf/m2 = 200.000,0 MPa
+        self.fy = 3569006.0 # kgf/m2 = 350 Mpa
+        self.fu = 42318214.0 # kgf/m2 = 415 MPa 
         self.id = id
 
         self.gdl = nf.gz # gdl # graus de liberdade
-        self.compressao = 0
-        self.tracao = 0
-        self.cortanteInicio = []
-        self.momentoInicio = []
-        self.cortanteFinal = []
-        self.momentoFinal = []
+        # self.compressao = {}#[]
+        self.normal = {}#[]
+        self.cortanteInicio = {}#[]
+        self.momentoInicio = {}#[]
+        self.cortanteFinal = {}#[]
+        self.momentoFinal = {}
 
         self.tipo = tipo
-        self.fboi = np.zeros((6))
+        self.fboi ={}#np.zeros((6))#
+        self.ua = {}
 
         # definição das seções iniciais para as barras
         secao = 'soldado'
-        d = 75.0 / 100.0
-        tw = 0.635 / 100.0
-        bf = 17.5 / 100.0
-        tf = 0.635 / 100.0
+        # valores estão indo em metros
+        d = 75.0 / 100
+        tw = 0.635 / 100
+        bf = 17.5 / 100
+        tf = 0.635 / 100
 
         # seção default para barras
         self.section = section.Section(secao, d, bf, tw, tf, self.e, self.fy)
@@ -90,10 +92,10 @@ class Barras(object):
         y1 = self.ni.get_y()
         y2 = self.nf.get_y()
         
-        if (x1 - x2) == 0: # caso a barra esteja na horizontal
+        if (y1 - y2) == 0: # caso a barra esteja na horizontal
             self.theta = m.acos(0)
-        elif (y1 - y2) == 0: # caso a barra esteja na vertical
-            self.theta = m.asin(0)
+        elif (x1 - x2) == 0: # caso a barra esteja na vertical
+            self.theta = 1.5708 # 90 graus em radianos
         else:
             # retorna em radianos            
             self.theta = m.atan((y2 - y1)/ (x2 - x1))
@@ -260,7 +262,7 @@ class Barras(object):
     # 1 - FIM
     ######################################################
 
-    def esforcos_nodais(self, tipoCarregamento, ua_list, liv):
+    def esforcos_nodais(self, tipoCarregamento, ua_list, liv, fo):
         # gdl graus de liberdade do sistema
         # matriz de deslocamentos nodais
         # matriz com graus de liberdade livres
@@ -277,25 +279,29 @@ class Barras(object):
             kli_u = np.dot(ki_li, u)
             fbi = kli_u
 
-            self.fbi = fbi + self.fboi
-            self.compressao = self.compreesao + [tipoCarregamento, round(1*self.fbi[0],2)]
-            self.tracao = self.tracao + [tipoCarregamento, round(1*self.fbi[0],2), self.tracao]
-            self.cortanteInicio = self.cortanteInicio + [tipoCarregamento,  round(abs(1*self.fbi[1]),2)]
-            self.momentoInicio = self.momentoInicio+ [tipoCarregamento,  round(abs(1*self.fbi[2]),2)]
-            self.cortanteFinal = self.cortanteFinal + [tipoCarregamento,  round(abs(1*self.fbi[4]),2)]
-            self.momentoFinal = self.momentoFinal + [tipoCarregamento, round(abs(1*self.fbi[5]),2)]
+            uaBarra = [u[self.ni.gx-1],u[self.ni.gy-1],u[self.ni.gz-1],
+                        u[self.nf.gx-1],u[self.nf.gy-1],u[self.nf.gz-1]]
+
+            self.fbi = fbi + self.fboi[tipoCarregamento]
+            self.ua[tipoCarregamento] = uaBarra
+            # self.compressao[tipoCarregamento] = round(1*self.fbi[0],2)
+            self.normal[tipoCarregamento] = round(1*self.fbi[0],2)
+            self.cortanteInicio[tipoCarregamento] =  round(abs(1*self.fbi[1]),2)
+            self.momentoInicio[tipoCarregamento] =  round(abs(1*self.fbi[2]),2)
+            self.cortanteFinal[tipoCarregamento] =  round(abs(1*self.fbi[4]),2)
+            self.momentoFinal[tipoCarregamento] =  round(abs(1*self.fbi[5]),2)
 
 
     def set_kx(self, kx):
         self.kx = kx
         # seta os comprimentos de flambagem da seção
-        self.section.set_lx(self.comprimento()*100, kx)
+        self.section.set_lx(self.comprimento(), kx)
 
 
     def set_ky(self, ky):
         self.ky = ky
         # seta os comprimentos de flambagem da seção
-        self.section.set_ly(self.comprimento()*100, ky)
+        self.section.set_ly(self.comprimento(), ky)
 
 
     def set_propriedades(self):
@@ -309,11 +315,11 @@ class Barras(object):
         #     self.set_ky(1) 
         #     self.set_kx(1) 
 
-        self.fy = 35 * 100 # 35 kN/cm² * 100 => 3500 kgf/cm²
+        # self.fy = 35 * 100 # 35 kN/cm² * 100 => 3500 kgf/cm²
 
 
     def set_peso(self):
-        lb = self.comprimento() # m
+        lb = self.comprimento() # cm
 
         peso = (lb) * self.section.get_peso_linear()
         self.peso = peso
@@ -341,3 +347,6 @@ class Barras(object):
         return self.ratio
 
  
+
+def red(numero):
+    return round(numero,2)
