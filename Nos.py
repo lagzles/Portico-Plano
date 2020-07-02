@@ -17,19 +17,22 @@ class Nos(object):
         self.id = gz / 3
 
         self.apoio = apoio
-        self.rx = 0
-        self.ry = 0
-        self.mz = 0
+        self.rx = {}#0
+        self.ry = {}#0
+        self.mz = {}#0
         self.reacoes = []
     
     def __str__(self):
         return "nó " + str(self.id)
     
     def printReacoes(self):
-        if 1 > 0:
-            return print(round(self.rx,2), round(self.ry,2), round(self.mz,2))
-        else:
-            return print(['not',0])
+        print('no ',self.id, self.apoio)
+        for key in sorted(self.rx):
+            print(key,'\t',
+                        round(self.rx[key],1),'\t',
+                        round(self.ry[key],1),'\t',
+                        round(self.mz[key],1))
+        return True
 
     
     def get_x(self):
