@@ -1,6 +1,6 @@
 import numpy as np
 import math as m
-import secao_002 as section
+from Secao import Section
 
 
 class Barras(object):
@@ -33,8 +33,9 @@ class Barras(object):
         tf = 0.635 / 100
 
         # seção default para barras
-        self.section = section.Section(secao, d, bf, tw, tf, self.e, self.fy)
-        self.set_propriedades()
+        self.sectionInicio = Section(secao, d, bf, tw, tf, self.e, self.fy)
+        self.sectionFinal = Section(secao, d, bf, tw, tf, self.e, self.fy)
+        self.set_peso()
         self.set_kx(kx)
         self.set_ky(ky)
         self.ratio_compressao = 0
@@ -43,6 +44,16 @@ class Barras(object):
 
        
     # metodos de retorno de parametros
+    def get_sections_area(self):
+        area1 = self.sectionInicio.get_area()
+        area2 = self.sectionFinal.get_area()
+        return (area1 + area2) / 2.0
+
+    def get_sections_ix(self):
+        ix1 = self.sectionInicio.get_ix()
+        ix2 = self.sectionFinal.get_ix()
+        return (ix1 + ix2) / 2.0
+
     def get_compressao(self):
         return self.compressao
 
@@ -103,8 +114,8 @@ class Barras(object):
 
     def set_ki(self):
         e = self.e
-        a = self.section.get_area()
-        ix = self.section.get_ix()
+        a = self.get_sections_area()
+        ix = self.get_sections_ix()
         # print(a, ix)
         l = self.comprimento()
         theta = self.theta
@@ -295,33 +306,24 @@ class Barras(object):
     def set_kx(self, kx):
         self.kx = kx
         # seta os comprimentos de flambagem da seção
-        self.section.set_lx(self.comprimento(), kx)
+        self.sectionInicio.set_lx(self.comprimento(), kx)
+        self.sectionFinal.set_lx(self.comprimento(), kx)
 
 
     def set_ky(self, ky):
         self.ky = ky
         # seta os comprimentos de flambagem da seção
-        self.section.set_ly(self.comprimento(), ky)
-
-
-    def set_propriedades(self):
-        self.set_peso()
-
-        # tipo_barra = self.tipo.split("-")[-1]
-        # if tipo_barra == 'inferior':
-        #     self.set_ky(1) 
-        #     self.set_kx(5) 
-        # else:
-        #     self.set_ky(1) 
-        #     self.set_kx(1) 
-
-        # self.fy = 35 * 100 # 35 kN/cm² * 100 => 3500 kgf/cm²
+        self.sectionInicio.set_ly(self.comprimento(), ky)
+        self.sectionFinal.set_ly(self.comprimento(), ky)
 
 
     def set_peso(self):
-        lb = self.comprimento() # cm
+        lb = self.comprimento() # m
 
-        peso = (lb) * self.section.get_peso_linear()
+        areaMedia = self.get_sections_area()
+        pesoLinear = areaMedia * 7850 # 7850 kg/m3
+
+        peso = (lb) * pesoLinear
         self.peso = peso
         return peso
 
