@@ -5,7 +5,7 @@ print('começando rotina teste')
 
 # valores em cm
 vaos = [25, 25]
-pd = 12
+pd = 10
 cumeeira = 25
 inc = 3
 influencia = 10.000
