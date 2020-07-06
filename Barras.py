@@ -54,33 +54,14 @@ class Barras(object):
         ix2 = self.sectionFinal.get_ix()
         return (ix1 + ix2) / 2.0
 
-    def get_compressao(self):
-        return self.compressao
-
-    def get_tracao(self):
-        return self.tracao
+    def get_peso(self):
+        return self.peso
+    
     
     def get_kci(self):
         return self.kci
 
-    def get_ni(self):
-        return self.ni
-
-    def get_nf(self):
-        return self.nf
-
-    def get_peso(self):
-        return self.peso
-
-    def set_ni(self, ni):
-        self.ni = ni
-        return ni
-
-    def set_nf(self, nf):
-        self.nf = nf
-        return nf
-
-    ######################################################
+       ######################################################
     ## 1 - FUNÇÔES PARA METODO DOS DESLOCAMENTOS!
     def set_gdl(self, gdl):
         self.gdl = gdl
@@ -88,20 +69,20 @@ class Barras(object):
 
 
     def comprimento(self):
-        x1 = self.ni.get_x()
-        x2 = self.nf.get_x()
-        y1 = self.ni.get_y()
-        y2 = self.nf.get_y()
+        x1 = self.ni.x
+        x2 = self.nf.x
+        y1 = self.ni.y
+        y2 = self.nf.y
         
         self.lb = ((x2 - x1)**2 + (y2 - y1)**2)**(0.5)        
         return self.lb
 
 
     def set_theta(self):
-        x1 = self.ni.get_x()
-        x2 = self.nf.get_x()
-        y1 = self.ni.get_y()
-        y2 = self.nf.get_y()
+        x1 = self.ni.x
+        x2 = self.nf.x
+        y1 = self.ni.y
+        y2 = self.nf.y
         
         if (y1 - y2) == 0: # caso a barra esteja na horizontal
             self.theta = m.acos(0)
@@ -152,7 +133,7 @@ class Barras(object):
             kbi[5][4] = - 6 * e * ix / (l**2)
             kbi[5][5] = 4 * e * ix / (l)
 
-        elif self.get_ni().apoio == 'bi-articulado':
+        elif self.ni().apoio == 'bi-articulado':
             # situação de barras articulada em ambas extremidades
             # print('bi-articulada gy', self.ni.gy-1, self.ni.y)
             kbi[0][0] = e * a / l
@@ -161,7 +142,7 @@ class Barras(object):
             kbi[3][0] = - e * a / l
             kbi[3][3] = e * a / l
         
-        elif self.get_ni().apoio == 'rotuladoInicial':
+        elif self.ni().apoio == 'rotuladoInicial':
             # if self.ni.y == 0:
             #     print('Rotulado inicial gx/gy', self.ni.gx-1, self.ni.gy-1)
             kbi[0][0] = e * a / l
@@ -190,7 +171,7 @@ class Barras(object):
             kbi[5][4] = - 3 * e * ix / (l**2)
             kbi[5][5] = - 3 * e * ix / (l)
 
-        elif self.get_nf().apoio == 'rotuladoFinal':
+        elif self.nf().apoio == 'rotuladoFinal':
             # if self.nf.y == 0:
             #     print('Rotulado Final gx/gy', self.ni.gx-1, self.ni.gy-1)
             kbi[0][0] = e * a / l
@@ -253,6 +234,7 @@ class Barras(object):
         gdl = self.gdl
         self.comprimento()
         self.set_theta()
+        # gera a atriz de rigidez local e global da barra
         self.set_ki()
         li = np.zeros((6, gdl))
 
@@ -324,16 +306,25 @@ class Barras(object):
         pesoLinear = areaMedia * 7850 # 7850 kg/m3
 
         peso = (lb) * pesoLinear
+        self.peso_linear = pesoLinear
         self.peso = peso
         return peso
 
-    def set_section(self, dicionario):
-        self.section.set_section(dicionario)
-        self.set_kx(dicionario['kx'])
-        self.set_ky(dicionario['ky'])
+    def set_section(self, dicionarioInicio, dicionarioFinal, kx, ky): 
+        self.section.set_section(dicionarioInicio)
+        self.sectionFinal.set_section(dicionarioFinal)
+        self.set_kx(kx)
+        self.set_ky(ky)
         self.set_peso()
+        # refaz a matriz de rigidez em coordenadas local e global da barra
         self.set_kci()
     
+
+
+
+    # TODO ajustar metodo para fazer combinações dos esforços,
+    # TODO ajustar para verificar estado limite ultimo
+    # TODO ajustar para verificar estado limite de serviço (talvez separar em 2 metodos)
     def verificar(self):
         nc_rd = self.section.verificar_compressao()
         nt_rd = self.section.verificar_tracao()

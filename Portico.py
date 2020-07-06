@@ -5,6 +5,9 @@ import numpy as np
 from math import sin
 import desenhar as dwg
 
+# TODO metodo de verificação das barras em ELU e ELS
+# TODO metodo de desenho para reações
+# TODO metodo de desenho de corte
 
 class Portico(object):
 			
@@ -38,17 +41,11 @@ class Portico(object):
 		# print('inclinacao', inclinacao)
 
 		self.GerarBarrasEPontos()
-		self.DefinirGDL()
 		self.GerarDesenhoDXF()
 
 
 	def SetarCarregamentos(self, carregamentos):
 		self.carregamentos = carregamentos
-		# for carr in carregamentos:
-		# 	if carr[0] == 'ultimo':
-		# 		self.carregamentosELU.append(carr[1])
-		# 	else:
-		# 		self.carregamentosELS.append(carr[1])
     		
 
 	def AnaliseMatricial(self):
@@ -65,7 +62,13 @@ class Portico(object):
 			barra.momentoInicio = {}
 			barra.cortanteFinal = {}
 			barra.momentoFinal = {}
+		
+		# carregamento de Peso Proprio
+		for barra in self.lista_barras:
+			print()
 
+
+		# carregamentos:  permanente, sobrecargas e vento
 		for tipoCarr, carregamento in self.carregamentos:
 			# carregamentos nodais equivalentes de cada barra
 			# agua esquerda = carregamento[0]
@@ -239,19 +242,7 @@ class Portico(object):
 		dwg.desenhar_portico(self, 'portico.dxf')
 
 
-	def DefinirGDL(self):
-		numeroNos = len(self.lista_nos)
-		# print('gdls')
-		# print(numeroNos*3, self.gdl)
-		maiorGdl = 0
-
-
 	def GerarBarrasEPontos(self):
-		# # numero de vaos
-		# print('#'*20)
-		# print()
-		# print('Barras e Pontos')
-
 		n = len(self.lista_vaos)
 		# numero de pilares
 		np = n + 1
@@ -306,6 +297,7 @@ class Portico(object):
 				pontos_topo.append([oitao, cota ])
 				# após definido os pontos de cada parcial do oitao, se define os pontos das vigas
 			# salvar cota do lado direito do galpao
+
 		# lançar nós e barras das vigas, no objeto Portico
 		nof = None
 		for p in range(len(pontos_topo)-1):
@@ -332,18 +324,21 @@ class Portico(object):
 			
 			coluna = 'coluna'
 			pontoIndex = pontos_base.index(ponto)
+			altura_alvenaria = 3
 
 			# ponto inicial tera propriedade apoio diferente de False
 			if pontoIndex == 0 or pontoIndex == (len(pontos_base)-1):
 				# print('e')
 				apoio = 'engaste'
 				coluna = 'coluna-externa'
+				kx = altura_alvenaria
 				# apoio = 'rotuladoInicial'
 			else:
 				# print('r')
 				# apoio = 'rotuladoInicial'
 				# apoio = 'rotuladoFinal'
 				apoio = 'bi-articulado'
+				kx = 1
 				# apoio = 'engaste'
 
 			gx = gdl + 1
@@ -358,10 +353,11 @@ class Portico(object):
 				if no.x == nob.x and no.y != 0:
 					barraId = len(self.lista_barras)+1
 					# no.apoio = 'topo'
+					dy = abs(no.y - nob.y)
 					coluna = br.Barras(nob, no, barraId, 1, 1, coluna)
 					self.lista_barras.append(coluna)
 					self.lista_bases.append(nob)
-		
+
 
 	def PontosIntermediariosDaViga(self, noi, vao, cota):
 		# no2
@@ -396,7 +392,7 @@ class Portico(object):
 				self.gdl += 3
 				
 				barra_id = len(self.lista_barras) + 1
-				barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, n , n, 'viga')
+				barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, vao/1.9, n, 'viga')
 
 				self.lista_barras.append(barraIntermediaria)
 				self.lista_nos.append(ptFim)
@@ -408,7 +404,7 @@ class Portico(object):
 			self.gdl += 3
 
 			barra_id = len(self.lista_barras) + 1
-			barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, n , n, 'viga')
+			barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, vao/2.0, n, 'viga')
 
 			self.lista_barras.append(barraIntermediaria)
 			self.lista_nos.append(ptFim)
