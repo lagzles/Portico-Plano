@@ -54,6 +54,7 @@ class Portico(object):
 		print('Fazendo analise\n')
 		self.MontarMatrizRigidez()
 		self.ua = {}
+		oitao = sum(self.lista_vaos)
 		for barra in self.lista_barras:
 			barra.fboi = {}
 			# barra.compressao = {}
@@ -63,34 +64,22 @@ class Portico(object):
 			barra.cortanteFinal = {}
 			barra.momentoFinal = {}
 		
-		# carregamento de Peso Proprio
-		for barra in self.lista_barras:
-			print()
-
-
 		# carregamentos:  permanente, sobrecargas e vento
 		for tipoCarr, carregamento in self.carregamentos:
-			# carregamentos nodais equivalentes de cada barra
-			# agua esquerda = carregamento[0]
-			# agua direita = carregamento[1]
-			# coluna esquerda = carregamento[2]
-			# coluna direita = carregamento[3]
-			oitao = sum(self.lista_vaos)
 			fa = np.zeros((len(self.liv)))
 			fo = np.zeros((self.gdl))
-			fo1 = np.zeros((self.gdl))
-
+			# fo1 = np.zeros((self.gdl))
 			for barra in self.lista_barras:
 				if barra.tipo == 'viga':
 					yi = barra.ni.y
 					yf = barra.nf.y
-					if (yi-yf) < 0: # vigas da agua da esquerda
+					if tipoCarr == 'pp':
+						barra.set_peso()
+						carr = barra.peso_linear
+					elif (yi-yf) < 0: # vigas da agua da esquerda
 						carr = carregamento[0]
 					else: # vigas da agua da direita
 						carr = carregamento[1]
-					# mz = (carr * (barra.comprimento() ** 2) ) / 12.
-					# fy = (carr * barra.comprimento() ) / 2.
-					# fx = 0*fy * round(sin(barra.theta),4)
 
 				elif barra.tipo == 'coluna-externa':
 					colunaX = barra.ni.x
@@ -98,9 +87,6 @@ class Portico(object):
 						carr = carregamento[2]
 					else: # coluna externa da direita
 						carr = carregamento[3]
-					# mz = (carr * (barra.comprimento() ** 2) ) / 12.
-					# fy = (carr * barra.comprimento() ) / 2.
-					# fx = 0*fy * round(sin(barra.theta),4)
 
 				else: # colunas internas
 					carr = 0
@@ -221,16 +207,12 @@ class Portico(object):
 				elif no.apoio == 'rotuladoInicial' or no.apoio == "rotuladoFinal":
 					ap = ap + [no.gx - 1]
 					ap = ap + [no.gy - 1]
-					# ap = ap + [no.gz - 1]
-					# liv = liv + [no.gx - 1]
 					liv = liv + [no.gz - 1]
 
 				elif no.apoio == 'bi-articulado':
-					# ap = ap + [no.gx - 1]
 					ap = ap + [no.gy - 1]
 					liv = liv + [no.gx - 1]
 					liv = liv + [no.gz - 1]
-					# ap = ap + [no.gz - 1]
 
 		self.liv = liv
 		self.ap = ap
@@ -296,7 +278,6 @@ class Portico(object):
 				pontos_base.append([oitao, 0])
 				pontos_topo.append([oitao, cota ])
 				# após definido os pontos de cada parcial do oitao, se define os pontos das vigas
-			# salvar cota do lado direito do galpao
 
 		# lançar nós e barras das vigas, no objeto Portico
 		nof = None
@@ -332,14 +313,12 @@ class Portico(object):
 				apoio = 'engaste'
 				coluna = 'coluna-externa'
 				kx = altura_alvenaria
-				# apoio = 'rotuladoInicial'
 			else:
 				# print('r')
 				# apoio = 'rotuladoInicial'
 				# apoio = 'rotuladoFinal'
 				apoio = 'bi-articulado'
 				kx = 1
-				# apoio = 'engaste'
 
 			gx = gdl + 1
 			gy = gdl + 2
@@ -377,9 +356,7 @@ class Portico(object):
 			dx = (xt-xb) / n
 			dy = (yt-yb) / n
 
-			# gdl = self.gdl
 			ptFim = None #ns.Nos(xb+dx, yb+dy, gdl+1, gdl+2, gdl+3, 0, 0, 0,False)
-			# self.gdl += 3
 			# para divisao padrao do vao, em 3 partes
 			for j in range(0, n):
 				if j == 0:

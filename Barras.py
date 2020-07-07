@@ -318,8 +318,6 @@ class Barras(object):
         self.set_peso()
         # refaz a matriz de rigidez em coordenadas local e global da barra
         self.set_kci()
-    
-
 
 
     # TODO ajustar metodo para fazer combinações dos esforços,
