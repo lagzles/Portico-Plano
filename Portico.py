@@ -75,7 +75,7 @@ class Portico(object):
 					yf = barra.nf.y
 					if tipoCarr == 'pp':
 						barra.set_peso()
-						carr = barra.peso_linear
+						carr = - barra.peso_linear
 					elif (yi-yf) < 0: # vigas da agua da esquerda
 						carr = carregamento[0]
 					else: # vigas da agua da direita
@@ -83,7 +83,9 @@ class Portico(object):
 
 				elif barra.tipo == 'coluna-externa':
 					colunaX = barra.ni.x
-					if colunaX == 0: # coluna externa da esquerda
+					if tipoCarr == 'pp':
+						carr = 0
+					elif colunaX == 0: # coluna externa da esquerda
 						carr = carregamento[2]
 					else: # coluna externa da direita
 						carr = carregamento[3]
@@ -177,6 +179,7 @@ class Portico(object):
 		for no in self.lista_bases:
 			# print(base)
 			no.printReacoes()
+			print('#########################\n')
 		print('\n')
 
 	
@@ -312,13 +315,11 @@ class Portico(object):
 				# print('e')
 				apoio = 'engaste'
 				coluna = 'coluna-externa'
-				kx = altura_alvenaria
 			else:
 				# print('r')
 				# apoio = 'rotuladoInicial'
 				# apoio = 'rotuladoFinal'
 				apoio = 'bi-articulado'
-				kx = 1
 
 			gx = gdl + 1
 			gy = gdl + 2
@@ -333,7 +334,13 @@ class Portico(object):
 					barraId = len(self.lista_barras)+1
 					# no.apoio = 'topo'
 					dy = abs(no.y - nob.y)
-					coluna = br.Barras(nob, no, barraId, 1, 1, coluna)
+					if coluna == 'bi-articulado':
+						kx = 1
+						ky = 1
+					else:
+						kx = 1
+						ky = altura_alvenaria / dy
+					coluna = br.Barras(nob, no, barraId, kx, ky, coluna)
 					self.lista_barras.append(coluna)
 					self.lista_bases.append(nob)
 
@@ -369,7 +376,7 @@ class Portico(object):
 				self.gdl += 3
 				
 				barra_id = len(self.lista_barras) + 1
-				barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, vao/1.9, n, 'viga')
+				barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, n, 2.1/vao, 'viga')
 
 				self.lista_barras.append(barraIntermediaria)
 				self.lista_nos.append(ptFim)
@@ -381,7 +388,7 @@ class Portico(object):
 			self.gdl += 3
 
 			barra_id = len(self.lista_barras) + 1
-			barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, vao/2.0, n, 'viga')
+			barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, n, 2.1/vao, 'viga')
 
 			self.lista_barras.append(barraIntermediaria)
 			self.lista_nos.append(ptFim)

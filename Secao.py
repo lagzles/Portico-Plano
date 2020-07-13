@@ -4,7 +4,7 @@ import Barras as bar
 from verificar import *
 
 class Section():
-    def __init__(self, tipo, d, bf, tw, tf, e, fy):
+    def __init__(self, tipo, d, bf, tw, tf, e, fy, kx, ky):
         self.tipo = tipo
 
         self.d = d
@@ -16,6 +16,8 @@ class Section():
         self.e = e
         self.g = 7851813200.0 # kgf/m2 = 77000.0 MPa
         self.fy = fy
+        self.kx = kx
+        self.ky = ky
         
         self.set_propriedades()
 
@@ -247,6 +249,7 @@ class Section():
         tr = 0.3 * fy
 
         self.tr = tr
+        self.tensaor = tr
         return tr
 
     def set_cw(self):
@@ -292,6 +295,8 @@ class Section():
         fla = verificacao_flexao_FLA(self)
         flm = verificacao_flexao_FLM(self)
         flt = verificacao_flexao_FLT(self)
+        print('fla', 'flm', 'flt')
+        print(fla, flm, flt)
         return min(fla, min(flt, flm))
 
     def verificar_cisalhamento(self):

@@ -48,6 +48,7 @@ else:
     carr7 = ['cv 270 i',  [ 0.70*cvL,  0.70*cvL, +0.20*cvL, +1.00*cvL]] # <
     carr8 = ['cv 270 ii', [ 1.20*cvL,  1.20*cvL, +0.70*cvL, +0.50*cvL]] # <<
 
+carregamentos.append(carr0)
 carregamentos.append(carr1)
 carregamentos.append(carr2)
 carregamentos.append(carr3)
@@ -61,3 +62,8 @@ portico.SetarCarregamentos(carregamentos)
 portico.AnaliseMatricial()
 
 portico.GerarDesenhoDXF()
+
+for barra in portico.lista_barras:
+    if barra.tipo == 'coluna-externa':
+        print(barra.momentoFinal)
+        print('idashdiuhauidhui')

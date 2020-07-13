@@ -33,8 +33,8 @@ class Barras(object):
         tf = 0.635 / 100
 
         # seção default para barras
-        self.sectionInicio = Section(secao, d, bf, tw, tf, self.e, self.fy)
-        self.sectionFinal = Section(secao, d, bf, tw, tf, self.e, self.fy)
+        self.sectionInicio = Section(secao, d, bf, tw, tf, self.e, self.fy, kx, ky)
+        self.sectionFinal = Section(secao, d, bf, tw, tf, self.e, self.fy, kx, ky)
         self.set_peso()
         self.set_kx(kx)
         self.set_ky(ky)
@@ -279,10 +279,10 @@ class Barras(object):
             self.ua[tipoCarregamento] = uaBarra
             # self.compressao[tipoCarregamento] = round(1*self.fbi[0],2)
             self.normal[tipoCarregamento] = round(1*self.fbi[0],2)
-            self.cortanteInicio[tipoCarregamento] =  round(abs(1*self.fbi[1]),2)
-            self.momentoInicio[tipoCarregamento] =  round(abs(1*self.fbi[2]),2)
-            self.cortanteFinal[tipoCarregamento] =  round(abs(1*self.fbi[4]),2)
-            self.momentoFinal[tipoCarregamento] =  round(abs(1*self.fbi[5]),2)
+            self.cortanteInicio[tipoCarregamento] =  round((1*self.fbi[1]),2)
+            self.momentoInicio[tipoCarregamento] =  round((1*self.fbi[2]),2)
+            self.cortanteFinal[tipoCarregamento] =  round((1*self.fbi[4]),2)
+            self.momentoFinal[tipoCarregamento] =  round((1*self.fbi[5]),2)
 
 
     def set_kx(self, kx):
@@ -333,21 +333,219 @@ class Barras(object):
         
         mi_rd = self.sectionInicio.verificar_flexao()
         mf_rd = self.sectionFinal.verificar_flexao()
+
+        vi_rd = self.sectionInicio.verificar_cisalhamento()
+        vf_rd = self.sectionFinal.verificar_cisalhamento()
         
-        ratio1 = round(abs(self.compressao) / nci_rd,2)
-        ratio2 = round(abs(self.tracao) / nti_rd,2)
+        ratio_mi = round(self.elu_msdi / mi_rd, 2)
+        ratio_mf = round(self.elu_msdf / mf_rd, 2)
+        ratio_vi = round(self.elu_vsdi / mi_rd, 2)
+        ratio_vf = round(self.elu_vsdf / mi_rd, 2)
+
+        ratio1 = round(abs(self.elu_ncsd) / nci_rd,2)
+        ratio2 = round(abs(self.elu_ntsd) / nti_rd,2)
 
         self.ratio_compressao = ratio1
         self.ratio_tracao = ratio2
+        print(mi_rd, mf_rd)
 
         self.ratio = round(max(ratio1, ratio2),2)
+        self.ratio_mi = ratio_mi
+        self.ratio_mf = ratio_mf
+        self.ratio_vi = ratio_vi
+        self.ratio_vf = ratio_vf
 
         return self.ratio
 
 
     def set_combinacoes_esforcos(self):
         print()
+        carregamentos = ['pp','cp','sc','su','cv 0','cv 90 i', 'cv 90 ii', 'cv 270 i', 'cv 270 ii']
+        # normal, cortanteInicio, cortanteFinal, momentoInicio, momentoFinal
+        ### ESFORÇO NORMAL DA BARRA
+        n_pp = self.normal['pp']
+        n_cp = self.normal['cp']
+        n_sc = self.normal['sc']
+        n_su = self.normal['su']
 
+        n_cv_0 = self.normal['cv 0']
+        n_cv_90i = self.normal['cv 90 i']
+        n_cv_90ii = self.normal['cv 90 ii']
+        n_cv_270i = self.normal['cv 270 i']
+        n_cv_270ii = self.normal['cv 270 ii']
+
+        ### ESFORÇOS DE CORTANTE NO INICIAL DA BARRA
+        vi_pp = self.cortanteInicio['pp']
+        vi_cp = self.cortanteInicio['cp']
+        vi_sc = self.cortanteInicio['sc']
+        vi_su = self.cortanteInicio['su']
+
+        vi_cv_0 = self.cortanteInicio['cv 0']
+        vi_cv_90i = self.cortanteInicio['cv 90 i']
+        vi_cv_90ii = self.cortanteInicio['cv 90 ii']
+        vi_cv_270i = self.cortanteInicio['cv 270 i']
+        vi_cv_270ii = self.cortanteInicio['cv 270 ii']
+        
+        ### ESFORÇOS DE MOMENTO NO INICIAL DA BARRA
+        mi_pp = self.momentoInicio['pp']
+        mi_cp = self.momentoInicio['cp']
+        mi_sc = self.momentoInicio['sc']
+        mi_su = self.momentoInicio['su']
+
+        mi_cv_0 = self.momentoInicio['cv 0']
+        mi_cv_90i = self.momentoInicio['cv 90 i']
+        mi_cv_90ii = self.momentoInicio['cv 90 ii']
+        mi_cv_270i = self.momentoInicio['cv 270 i']
+        mi_cv_270ii = self.momentoInicio['cv 270 ii']
+        
+        ### ESFORÇOS DE CORTANTE NO FINAL DA BARRA
+        vf_pp = self.cortanteFinal['pp']
+        vf_cp = self.cortanteFinal['cp']
+        vf_sc = self.cortanteFinal['sc']
+        vf_su = self.cortanteFinal['su']
+
+        vf_cv_0 = self.cortanteFinal['cv 0']
+        vf_cv_90i = self.cortanteFinal['cv 90 i']
+        vf_cv_90ii = self.cortanteFinal['cv 90 ii']
+        vf_cv_270i = self.cortanteFinal['cv 270 i']
+        vf_cv_270ii = self.cortanteFinal['cv 270 ii']
+        
+        ### ESFORÇOS DE MOMENTO NO FINAL DA BARRA
+        mf_pp = self.momentoFinal['pp']
+        mf_cp = self.momentoFinal['cp']
+        mf_sc = self.momentoFinal['sc']
+        mf_su = self.momentoFinal['su']
+
+        mf_cv_0 = self.momentoFinal['cv 0']
+        mf_cv_90i = self.momentoFinal['cv 90 i']
+        mf_cv_90ii = self.momentoFinal['cv 90 ii']
+        mf_cv_270i = self.momentoFinal['cv 270 i']
+        mf_cv_270ii = self.momentoFinal['cv 270 ii']
+        
+        #################################################################
+        # elu_sc = 1.25x(pp+cp) + 1.5xSC + 1.4xSU
+        # elu_cv = 1.00x(pp+cp) + 1.4xCV
+        # elu_sc_cv = 1.25x(pp+cp) + 1.5xSC + 1.4xSU + 0,84xCV
+        # elu_cv_sc = 1.25x(pp+cp) + 1.2xSC + 1.05xSU + 1,4xCV
+        #################################################################
+        ##### COMBINAÇÃO DE NORMAL DAS BARRAS
+        # elu_sc = 1.25x(pp+cp) + 1.5xSC + 1.4xSU
+        # elu_cv = 1.00x(pp+cp) + 1.4xCV
+        elu_n_a =  1.25 * (n_pp + n_cp) + 1.5 * n_sc + 1.4 * n_su
+        elu_nc = min((elu_n_a), 0)
+        elu_nt = max((elu_n_a), 0)
+
+        elu_n_b = 1.00 * (n_pp + n_cp) + 1.4 * n_cv_0
+        elu_nc = min((elu_nc), (elu_n_b))
+        elu_nt = max((elu_nt), (elu_n_b))
+
+        elu_n_b = 1.00 * (n_pp + n_cp) + 1.4 * n_cv_90i
+        elu_nc = min((elu_nc), (elu_n_b))
+        elu_nt = max((elu_nt), (elu_n_b))
+
+        elu_n_b = 1.00 * (n_pp + n_cp) + 1.4 * n_cv_90ii
+        elu_nc = min((elu_nc), (elu_n_b))
+        elu_nt = max((elu_nt), (elu_n_b))
+
+        elu_n_b = 1.00 * (n_pp + n_cp) + 1.4 * n_cv_270i
+        elu_nc = min((elu_nc), (elu_n_b))
+        elu_nt = max((elu_nt), (elu_n_b))
+
+        elu_n_b = 1.00 * (n_pp + n_cp) + 1.4 * n_cv_270ii
+        elu_nc = min((elu_nc), (elu_n_b))
+        elu_nt = max((elu_nt), (elu_n_b))
+
+
+
+        ##### COMBINAÇÃO DE CORTANTE INICIO DAS BARRAS
+        # elu_sc = 1.25x(pp+cp) + 1.5xSC + 1.4xSU
+        # elu_cv = 1.00x(pp+cp) + 1.4xCV
+        elu_vi_a =  1.25 * (vi_pp + vi_cp) + 1.5 * vi_sc + 1.4 * vi_su
+        elu_vi_b = 1.00 * (vi_pp + vi_cp) + 1.4 * vi_cv_0
+        elu_vi = max(abs(elu_vi_a), abs(elu_vi_b))
+
+        elu_vi_b = 1.00 * (vi_pp + vi_cp) + 1.4 * vi_cv_90i
+        elu_vi = max(abs(elu_vi), abs(elu_vi_b))
+
+        elu_vi_b = 1.00 * (vi_pp + vi_cp) + 1.4 * vi_cv_90ii
+        elu_vi = max(abs(elu_vi), abs(elu_vi_b))
+
+        elu_vi_b = 1.00 * (vi_pp + vi_cp) + 1.4 * vi_cv_270i
+        elu_vi = max(abs(elu_vi), abs(elu_vi_b))
+
+        elu_vi_b = 1.00 * (vi_pp + vi_cp) + 1.4 * vi_cv_270ii
+        elu_vi = max(abs(elu_vi), abs(elu_vi_b))
+
+
+        ##### COMBINAÇÃO DE MOMENTOS INICIO DAS BARRAS
+        # elu_sc = 1.25x(pp+cp) + 1.5xSC + 1.4xSU
+        # elu_cv = 1.00x(pp+cp) + 1.4xCV
+        elu_mi_a =  1.25 * (mi_pp + mi_cp) + 1.5 * mi_sc + 1.4 * mi_su
+        elu_mi_b = 1.00 * (mi_pp + mi_cp) + 1.4 * mi_cv_0
+        elu_mi = max(abs(elu_mi_a), abs(elu_mi_b))
+
+        elu_mi_b = 1.00 * (mi_pp + mi_cp) + 1.4 * mi_cv_90i
+        elu_mi = max(abs(elu_mi), abs(elu_mi_b))
+
+        elu_mi_b = 1.00 * (mi_pp + mi_cp) + 1.4 * mi_cv_90ii
+        elu_mi = max(abs(elu_mi), abs(elu_mi_b))
+
+        elu_mi_b = 1.00 * (mi_pp + mi_cp) + 1.4 * mi_cv_270i
+        elu_mi = max(abs(elu_mi), abs(elu_mi_b))
+
+        elu_mi_b = 1.00 * (mi_pp + mi_cp) + 1.4 * mi_cv_270ii
+        elu_mi = max(abs(elu_mi), abs(elu_mi_b))
+
+        
+        ##### COMBINAÇÃO DE CORTANTE FINAL DAS BARRAS
+        # elu_sc = 1.25x(pp+cp) + 1.5xSC + 1.4xSU
+        # elu_cv = 1.00x(pp+cp) + 1.4xCV
+        elu_vf_a =  1.25 * (vf_pp + vf_cp) + 1.5 * vf_sc + 1.4 * vf_su
+        elu_vf_b = 1.00 * (vf_pp + vf_cp) + 1.4 * vf_cv_0
+        elu_vf = max(abs(elu_vf_a), abs(elu_vf_b))
+
+        elu_vf_b = 1.00 * (vf_pp + vf_cp) + 1.4 * vf_cv_90i
+        elu_vf = max(abs(elu_vf), abs(elu_vf_b))
+
+        elu_vf_b = 1.00 * (vf_pp + vf_cp) + 1.4 * vf_cv_90ii
+        elu_vf = max(abs(elu_vf), abs(elu_vf_b))
+
+        elu_vf_b = 1.00 * (vf_pp + vf_cp) + 1.4 * vf_cv_270i
+        elu_vf = max(abs(elu_vf), abs(elu_vf_b))
+
+        elu_vf_b = 1.00 * (vf_pp + vf_cp) + 1.4 * vf_cv_270ii
+        elu_vf = max(abs(elu_vf), abs(elu_vf_b))
+
+
+        ##### COMBINAÇÃO DE MOMENTOS FINAL DAS BARRAS
+        # elu_sc = 1.25x(pp+cp) + 1.5xSC + 1.4xSU
+        # elu_cv = 1.00x(pp+cp) + 1.4xCV
+        elu_mf_a =  1.25 * (mf_pp + mf_cp) + 1.5 * mf_sc + 1.4 * mf_su
+        elu_mf_b = 1.00 * (mf_pp + mf_cp) + 1.4 * mf_cv_0
+        elu_mf = max(abs(elu_mf_a), abs(elu_mf_b))
+
+        elu_mf_b = 1.00 * (mf_pp + mf_cp) + 1.4 * mf_cv_90i
+        elu_mf = max(abs(elu_mf), abs(elu_mf_b))
+
+        elu_mf_b = 1.00 * (mf_pp + mf_cp) + 1.4 * mf_cv_90ii
+        elu_mf = max(abs(elu_mf), abs(elu_mf_b))
+
+        elu_mf_b = 1.00 * (mf_pp + mf_cp) + 1.4 * mf_cv_270i
+        elu_mf = max(abs(elu_mf), abs(elu_mf_b))
+
+        elu_mf_b = 1.00 * (mf_pp + mf_cp) + 1.4 * mf_cv_270ii
+        elu_mf = max(abs(elu_mf), abs(elu_mf_b))
+        
+        self.elu_ntsd = elu_nt # Tração
+        self.elu_ncsd = elu_nc # Compressão
+
+        self.elu_msdi = elu_mi # Momento Inicio da Barra
+        self.elu_msdf = elu_mf # Momento Final da Barra
+
+        self.elu_vsdi = elu_vi # Cortante Inicio da Barra
+        self.elu_vsdf = elu_vf # Cortante Final da Barra
+
+        
  
 
 def red(numero):

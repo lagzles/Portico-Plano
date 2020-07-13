@@ -3,8 +3,8 @@
 # ##################################### 
 # 
 def verificacao_flexao_FLA(Section): #d, tw, tf, wx, zx, fy):
-    hw = Section.d - 2 * Section.tf
-    lambda_ = Section.hw / Section.tw
+    hw = Section.d - 2 * Section.tfs
+    lambda_ = hw / Section.tw
     lambda_p = 3.76 * (Section.e / Section.fy) ** 0.5
     lambda_r = 5.70 * (Section.e / Section.fy) ** 0.5
     mpl = Section.zx * Section.fy
@@ -21,7 +21,7 @@ def verificacao_flexao_FLA(Section): #d, tw, tf, wx, zx, fy):
         
 
 def verificacao_flexao_FLM(Section): #bf, tf, kc, wx, zx, tensaor, fy):
-    lambda_ = Section.bf / (2 * Section.tf)
+    lambda_ = Section.bfs / (2 * Section.tfs)
     lambda_p = 0.38 * (Section.e / Section.fy) ** 0.5
     lambda_r = 0.95 * (Section.e / (Section.fy - Section.tensaor) / Section.kc) ** 0.5
 
@@ -43,7 +43,7 @@ def verificacao_flexao_FLT(Section): #ly, ry, iy, it, wx, zx, cw, tensaor, fy):
     j = Section.it
     b1 = (Section.fy - Section.tensaor) / ( Section.e * j)
 
-    lambda_ = Section.ly / Section.ry
+    lambda_ = Section.ly * Section.ky / Section.ry
     lambda_p = 1.76 * (Section.e / Section.fy) ** 0.5
     lambda_r = (1.38 * (Section.iy * j) ** 0.5) / (Section.ry * Section.j * b1) * ( 1 + (1 + (27 * Section.cw * b1 ** 2) / Section.iy) ** 0.5) ** 0.5
 
@@ -61,7 +61,7 @@ def verificacao_flexao_FLT(Section): #ly, ry, iy, it, wx, zx, cw, tensaor, fy):
         return mcr / 1.1
 
 def verificacao_cisalhamento(Section): #d, tw, tf, fy):
-    hw = Section.d - 2 * Section.tf
+    hw = Section.d - 2 * Section.tfs
     lambda_ = hw / Section.tw
     kv = 5
     lambda_p = 1.10 * (kv * Section.e / Section.fy) ** 0.5
