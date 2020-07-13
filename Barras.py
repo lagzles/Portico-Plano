@@ -320,15 +320,22 @@ class Barras(object):
         self.set_kci()
 
 
+
     # TODO ajustar metodo para fazer combinações dos esforços,
     # TODO ajustar para verificar estado limite ultimo
     # TODO ajustar para verificar estado limite de serviço (talvez separar em 2 metodos)
     def verificar(self):
-        nc_rd = self.section.verificar_compressao()
-        nt_rd = self.section.verificar_tracao()
+        nci_rd = self.sectionInicio.verificar_compressao()
+        ncf_rd = self.sectionFinal.verificar_compressao()
+
+        nti_rd = self.sectionInicio.verificar_tracao()
+        ntf_rd = self.sectionFinal.verificar_tracao()
         
-        ratio1 = round(abs(self.compressao) / nc_rd,2)
-        ratio2 = round(abs(self.tracao) / nt_rd,2)
+        mi_rd = self.sectionInicio.verificar_flexao()
+        mf_rd = self.sectionFinal.verificar_flexao()
+        
+        ratio1 = round(abs(self.compressao) / nci_rd,2)
+        ratio2 = round(abs(self.tracao) / nti_rd,2)
 
         self.ratio_compressao = ratio1
         self.ratio_tracao = ratio2
@@ -336,6 +343,10 @@ class Barras(object):
         self.ratio = round(max(ratio1, ratio2),2)
 
         return self.ratio
+
+
+    def set_combinacoes_esforcos(self):
+        print()
 
  
 

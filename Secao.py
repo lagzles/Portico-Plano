@@ -1,6 +1,7 @@
 # from operator import attrgetter
 import Barras as bar
-import verificar_001 as verificar
+#import verificar as verificar
+from verificar import *
 
 class Section():
     def __init__(self, tipo, d, bf, tw, tf, e, fy):
@@ -287,14 +288,28 @@ class Section():
     ###########################################################
     ############### PROPRIEDADES PARA CALCULO #################
     ###########################################################
+    def verificar_flexao(self):
+        fla = verificacao_flexao_FLA(self)
+        flm = verificacao_flexao_FLM(self)
+        flt = verificacao_flexao_FLT(self)
+        return min(fla, min(flt, flm))
+
+    def verificar_cisalhamento(self):
+        cis = verificacao_cisalhamento(self)
+        return cis
+
     def verificar_compressao(self):
         if self.tipo == 'soldado':
-            return verificar.compressao_soldado(self)
+            # return verificar.compressao_soldado(self)
+            return compressao_soldado(self)
         else:
-            return verificar.compressao_dobrado(self)
+            # return verificar.compressao_dobrado(self)
+            return compressao_dobrado(self)
 
     def verificar_tracao(self):
         if self.tipo == 'soldado':
-            return verificar.tracao_soldado(self)
+            # return verificar.tracao_soldado(self)
+            return tracao_soldado(self)
         else: 
-            return verificar.tracao_dobrado(self)
+            # return verificar.tracao_dobrado(self)
+            return tracao_dobrado(self)
