@@ -18,10 +18,10 @@ sc = 25 # kgf/m²
 su = 15 # kgf/m²
 cv = 80 # kgf/m²
 
-cpL = cp * influencia
+cpL = cp * influencia 
 scL = sc * influencia
 suL = su * influencia
-cvL = cv * influencia
+cvL = cv * influencia * 0
 
 
 carregamentos = []
@@ -63,7 +63,32 @@ portico.AnaliseMatricial()
 
 portico.GerarDesenhoDXF()
 
-for barra in portico.lista_barras:
-    if barra.tipo == 'coluna-externa':
-        print(barra.momentoFinal)
-        print('idashdiuhauidhui')
+# for barra in portico.lista_barras:
+#     if barra.tipo == 'viga':
+#         barra.set_combinacoes_esforcos()
+#         barra.verificar()
+#         print('barra id, momento inicio, ratio Mi, ratio Vi')
+#         print(barra.id,barra.elu_msdi, barra.ratio_mi, barra.ratio_vi)
+#         print()
+
+
+barra = portico.lista_barras[0]
+barra.set_combinacoes_esforcos()
+barra.verificar()
+print()
+print(barra.sectionInicio)
+print('barra id, momento inicio, MRd, ratio Mi')
+print(barra.id,barra.elu_msdi, barra.ratio_mi)
+print('barra id, momento Final, ratio Mf, ratio Vf')
+print(barra.id,barra.elu_msdf, barra.ratio_mf, barra.ratio_vf)
+
+barra = portico.lista_barras[2]
+barra.set_combinacoes_esforcos()
+barra.verificar()
+print()
+print(barra.sectionInicio)
+print('barra id, momento inicio, MRd, ratio Mi')
+print(barra.id,barra.elu_msdi, barra.ratio_mi)
+print('barra id, momento Final, ratio Mf, ratio Vf')
+print(barra.id,barra.elu_msdf, barra.ratio_mf, barra.ratio_vf)
+
