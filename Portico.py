@@ -59,10 +59,10 @@ class Portico(object):
 			barra.fboi = {}
 			# barra.compressao = {}
 			barra.normal = {}
-			barra.cortanteInicio = {}
-			barra.momentoInicio = {}
-			barra.cortanteFinal = {}
-			barra.momentoFinal = {}
+			barra.cortante_inicio = {}
+			barra.momento_inicio = {}
+			barra.cortante_final = {}
+			barra.momento_final = {}
 		
 		# carregamentos:  permanente, sobrecargas e vento
 		for tipoCarr, carregamento in self.carregamentos:
@@ -376,7 +376,7 @@ class Portico(object):
 				self.gdl += 3
 				
 				barra_id = len(self.lista_barras) + 1
-				barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, n, 2.1/vao, 'viga')
+				barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, 1, 2.2/dx, 'viga')
 
 				self.lista_barras.append(barraIntermediaria)
 				self.lista_nos.append(ptFim)
@@ -388,7 +388,7 @@ class Portico(object):
 			self.gdl += 3
 
 			barra_id = len(self.lista_barras) + 1
-			barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, n, 2.1/vao, 'viga')
+			barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, 1, 2.2/vao, 'viga')
 
 			self.lista_barras.append(barraIntermediaria)
 			self.lista_nos.append(ptFim)
