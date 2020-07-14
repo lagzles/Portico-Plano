@@ -4,7 +4,7 @@ import Barras as bar
 from verificar import *
 
 class Section():
-    def __init__(self, tipo, d, bf, tw, tf, e, fy, kx, ky):
+    def __init__(self, tipo, d, bf, tw, tf, e, fy):#, kx, ky):
         self.tipo = tipo
 
         self.d = d
@@ -16,10 +16,13 @@ class Section():
         self.e = e
         self.g = 7851813200.0 # kgf/m2 = 77000.0 MPa
         self.fy = fy
-        self.kx = kx
-        self.ky = ky
+        # self.kx = kx
+        # self.ky = ky
         
         self.set_propriedades()
+
+    def __str__(self):
+        return str(self.d*1000)+'x'+str(self.tw*1000)+'x'+str(self.bfs*1000)+'x'+str(self.tfs*1000)
 
     def set_propriedades(self):
         # self.fy = 35 * 100 # 35 kN/cm² * 100 => 3500 kgf/cm²
@@ -295,9 +298,8 @@ class Section():
         fla = verificacao_flexao_FLA(self)
         flm = verificacao_flexao_FLM(self)
         flt = verificacao_flexao_FLT(self)
-        print('fla', 'flm', 'flt')
-        print(fla, flm, flt)
-        return min(fla, min(flt, flm))
+
+        return min(fla, min(flt, flm))*0.9
 
     def verificar_cisalhamento(self):
         cis = verificacao_cisalhamento(self)
