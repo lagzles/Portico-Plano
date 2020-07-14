@@ -7,18 +7,18 @@ class Barras(object):
     def __init__(self, ni, nf, id, kx, ky, tipo):
         self.ni = ni
         self.nf = nf
-        self.e = 20394320000.0  #kgf/m2 = 200.000,0 MPa
-        self.fy = 3569006.0 # kgf/m2 = 350 Mpa
-        self.fu = 42318214.0 # kgf/m2 = 415 MPa 
+        self.e = 20000000000.0  #kgf/m2 = 200.000,0 MPa
+        self.fy = 34500000.0 # kgf/m2 = 350 Mpa
+        self.fu = 41500000.0 # kgf/m2 = 415 MPa 
         self.id = id
 
         self.gdl = nf.gz # gdl # graus de liberdade
         # self.compressao = {}#[]
         self.normal = {}#[]
-        self.cortanteInicio = {}#[]
-        self.momentoInicio = {}#[]
-        self.cortanteFinal = {}#[]
-        self.momentoFinal = {}
+        self.cortante_inicio = {}#[]
+        self.momento_inicio = {}#[]
+        self.cortante_final = {}#[]
+        self.momento_final = {}
 
         self.tipo = tipo
         self.fboi ={}#np.zeros((6))#
@@ -27,20 +27,33 @@ class Barras(object):
         # definição das seções iniciais para as barras
         secao = 'soldado'
         # valores estão indo em metros
-        d = 75.0 / 100
+        d = 85.0 / 100
         tw = 0.635 / 100
         bf = 17.5 / 100
         tf = 0.635 / 100
 
         # seção default para barras
-        self.sectionInicio = Section(secao, d, bf, tw, tf, self.e, self.fy, kx, ky)
-        self.sectionFinal = Section(secao, d, bf, tw, tf, self.e, self.fy, kx, ky)
+        self.sectionInicio = Section(secao, d, bf, tw, tf, self.e, self.fy)#, kx, ky)
+        self.sectionFinal = Section(secao, d, bf, tw, tf, self.e, self.fy)#, kx, ky)
         self.set_peso()
         self.set_kx(kx)
         self.set_ky(ky)
-        self.ratio_compressao = 0
-        self.ratio_tracao = 0
-        self.ratio = 0
+
+        # esforços combinados do inicio e final da barra
+        self.elu_ntsd = 0
+        self.elu_ncsd = 0
+        self.elu_msdi = 0
+        self.elu_msdf = 0
+        self.elu_vsdi = 0
+        self.elu_vsdf = 0
+
+        # ratio's de momentos, cortantes e ratios combinados
+        self.ratio_mi = 0
+        self.ratio_vi = 0
+        self.ratio_mf = 0
+        self.ratio_vf = 0
+        self.ratio_inicio = 0
+        self.ratio_final = 0
 
        
     # metodos de retorno de parametros
@@ -279,10 +292,10 @@ class Barras(object):
             self.ua[tipoCarregamento] = uaBarra
             # self.compressao[tipoCarregamento] = round(1*self.fbi[0],2)
             self.normal[tipoCarregamento] = round(1*self.fbi[0],2)
-            self.cortanteInicio[tipoCarregamento] =  round((1*self.fbi[1]),2)
-            self.momentoInicio[tipoCarregamento] =  round((1*self.fbi[2]),2)
-            self.cortanteFinal[tipoCarregamento] =  round((1*self.fbi[4]),2)
-            self.momentoFinal[tipoCarregamento] =  round((1*self.fbi[5]),2)
+            self.cortante_inicio[tipoCarregamento] =  round((1*self.fbi[1]),2)
+            self.momento_inicio[tipoCarregamento] =  round((1*self.fbi[2]),2)
+            self.cortante_final[tipoCarregamento] =  round((1*self.fbi[4]),2)
+            self.momento_final[tipoCarregamento] =  round((1*self.fbi[5]),2)
 
 
     def set_kx(self, kx):
@@ -339,8 +352,8 @@ class Barras(object):
         
         ratio_mi = round(self.elu_msdi / mi_rd, 2)
         ratio_mf = round(self.elu_msdf / mf_rd, 2)
-        ratio_vi = round(self.elu_vsdi / mi_rd, 2)
-        ratio_vf = round(self.elu_vsdf / mi_rd, 2)
+        ratio_vi = round(self.elu_vsdi / vi_rd, 2)
+        ratio_vf = round(self.elu_vsdf / vf_rd, 2)
 
         ratio1 = round(abs(self.elu_ncsd) / nci_rd,2)
         ratio2 = round(abs(self.elu_ntsd) / nti_rd,2)
@@ -349,19 +362,100 @@ class Barras(object):
         self.ratio_tracao = ratio2
         print(mi_rd, mf_rd)
 
-        self.ratio = round(max(ratio1, ratio2),2)
         self.ratio_mi = ratio_mi
         self.ratio_mf = ratio_mf
         self.ratio_vi = ratio_vi
         self.ratio_vf = ratio_vf
 
+        # forcas combinadas
+        ratio = abs(self.elu_ncsd)/(2*nci_rd) + self.elu_msdi / mi_rd
+        self.ratio_inicio = ratio
+
+
         return self.ratio
 
+
+    def verificar_secao_inicio(self):
+        nci_rd = self.sectionInicio.verificar_compressao()
+        nti_rd = self.sectionInicio.verificar_tracao()
+        mi_rd = self.sectionInicio.verificar_flexao()
+        vi_rd = self.sectionInicio.verificar_cisalhamento()
+        
+        ratio_mi = round(self.elu_msdi / mi_rd, 2)
+        ratio_vi = round(self.elu_vsdi / vi_rd, 2)
+
+        ratio1 = round(abs(self.elu_ncsd) / nci_rd,2)
+        ratio2 = round(abs(self.elu_ntsd) / nti_rd,2)
+
+        self.ratio_compressao = ratio1
+        self.ratio_tracao = ratio2
+
+        self.ratio_mi = ratio_mi
+        self.ratio_vi = ratio_vi
+        
+        # forcas combinadas
+        ratioi = abs(self.elu_ncsd)/(2*nci_rd) + self.elu_msdi / mi_rd
+        self.ratio_inicio = ratioi
+        
+        ratiof = abs(self.elu_ncsd)/(2*ncf_rd) + self.elu_msdf / mf_rd
+        self.ratio_final = ratiof
+
+        return max(ratioi, ratiof)
+
+
+    def verificar_secao_final(self):
+        ncf_rd = self.sectionFinal.verificar_compressao()
+        ntf_rd = self.sectionFinal.verificar_tracao()
+        mf_rd = self.sectionFinal.verificar_flexao()
+        vf_rd = self.sectionFinal.verificar_cisalhamento()
+        
+        ratio_mf = round(self.elu_msdf / mf_rd, 2)
+        ratio_vf = round(self.elu_vsdf / vf_rd, 2)
+
+        ratio1 = round(abs(self.elu_ncsd) / ncf_rd,2)
+        ratio2 = round(abs(self.elu_ntsd) / ntf_rd,2)
+
+        self.ratio_compressao = ratio1
+        self.ratio_tracao = ratio2
+
+        self.ratio_mf = ratio_mf
+        self.ratio_vf = ratio_vf
+
+        # forcas combinadas
+        ratio = abs(self.elu_ncsd)/(2*ncf_rd) + self.elu_msdf / mf_rd
+        self.ratio_final = ratio
+
+        return ratio
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##########################################################################################
+##########################################################################################
+#########################  COMBINAÇÔES DE ESFORÇOS  ######################################
+##########################################################################################
+##########################################################################################
 
     def set_combinacoes_esforcos(self):
         print()
         carregamentos = ['pp','cp','sc','su','cv 0','cv 90 i', 'cv 90 ii', 'cv 270 i', 'cv 270 ii']
-        # normal, cortanteInicio, cortanteFinal, momentoInicio, momentoFinal
+        # normal, cortante_inicio, cortante_final, momento_inicio, momento_final
         ### ESFORÇO NORMAL DA BARRA
         n_pp = self.normal['pp']
         n_cp = self.normal['cp']
@@ -375,52 +469,52 @@ class Barras(object):
         n_cv_270ii = self.normal['cv 270 ii']
 
         ### ESFORÇOS DE CORTANTE NO INICIAL DA BARRA
-        vi_pp = self.cortanteInicio['pp']
-        vi_cp = self.cortanteInicio['cp']
-        vi_sc = self.cortanteInicio['sc']
-        vi_su = self.cortanteInicio['su']
+        vi_pp = self.cortante_inicio['pp']
+        vi_cp = self.cortante_inicio['cp']
+        vi_sc = self.cortante_inicio['sc']
+        vi_su = self.cortante_inicio['su']
 
-        vi_cv_0 = self.cortanteInicio['cv 0']
-        vi_cv_90i = self.cortanteInicio['cv 90 i']
-        vi_cv_90ii = self.cortanteInicio['cv 90 ii']
-        vi_cv_270i = self.cortanteInicio['cv 270 i']
-        vi_cv_270ii = self.cortanteInicio['cv 270 ii']
+        vi_cv_0 = self.cortante_inicio['cv 0']
+        vi_cv_90i = self.cortante_inicio['cv 90 i']
+        vi_cv_90ii = self.cortante_inicio['cv 90 ii']
+        vi_cv_270i = self.cortante_inicio['cv 270 i']
+        vi_cv_270ii = self.cortante_inicio['cv 270 ii']
         
         ### ESFORÇOS DE MOMENTO NO INICIAL DA BARRA
-        mi_pp = self.momentoInicio['pp']
-        mi_cp = self.momentoInicio['cp']
-        mi_sc = self.momentoInicio['sc']
-        mi_su = self.momentoInicio['su']
+        mi_pp = self.momento_inicio['pp']
+        mi_cp = self.momento_inicio['cp']
+        mi_sc = self.momento_inicio['sc']
+        mi_su = self.momento_inicio['su']
 
-        mi_cv_0 = self.momentoInicio['cv 0']
-        mi_cv_90i = self.momentoInicio['cv 90 i']
-        mi_cv_90ii = self.momentoInicio['cv 90 ii']
-        mi_cv_270i = self.momentoInicio['cv 270 i']
-        mi_cv_270ii = self.momentoInicio['cv 270 ii']
+        mi_cv_0 = self.momento_inicio['cv 0']
+        mi_cv_90i = self.momento_inicio['cv 90 i']
+        mi_cv_90ii = self.momento_inicio['cv 90 ii']
+        mi_cv_270i = self.momento_inicio['cv 270 i']
+        mi_cv_270ii = self.momento_inicio['cv 270 ii']
         
         ### ESFORÇOS DE CORTANTE NO FINAL DA BARRA
-        vf_pp = self.cortanteFinal['pp']
-        vf_cp = self.cortanteFinal['cp']
-        vf_sc = self.cortanteFinal['sc']
-        vf_su = self.cortanteFinal['su']
+        vf_pp = self.cortante_final['pp']
+        vf_cp = self.cortante_final['cp']
+        vf_sc = self.cortante_final['sc']
+        vf_su = self.cortante_final['su']
 
-        vf_cv_0 = self.cortanteFinal['cv 0']
-        vf_cv_90i = self.cortanteFinal['cv 90 i']
-        vf_cv_90ii = self.cortanteFinal['cv 90 ii']
-        vf_cv_270i = self.cortanteFinal['cv 270 i']
-        vf_cv_270ii = self.cortanteFinal['cv 270 ii']
+        vf_cv_0 = self.cortante_final['cv 0']
+        vf_cv_90i = self.cortante_final['cv 90 i']
+        vf_cv_90ii = self.cortante_final['cv 90 ii']
+        vf_cv_270i = self.cortante_final['cv 270 i']
+        vf_cv_270ii = self.cortante_final['cv 270 ii']
         
         ### ESFORÇOS DE MOMENTO NO FINAL DA BARRA
-        mf_pp = self.momentoFinal['pp']
-        mf_cp = self.momentoFinal['cp']
-        mf_sc = self.momentoFinal['sc']
-        mf_su = self.momentoFinal['su']
+        mf_pp = self.momento_final['pp']
+        mf_cp = self.momento_final['cp']
+        mf_sc = self.momento_final['sc']
+        mf_su = self.momento_final['su']
 
-        mf_cv_0 = self.momentoFinal['cv 0']
-        mf_cv_90i = self.momentoFinal['cv 90 i']
-        mf_cv_90ii = self.momentoFinal['cv 90 ii']
-        mf_cv_270i = self.momentoFinal['cv 270 i']
-        mf_cv_270ii = self.momentoFinal['cv 270 ii']
+        mf_cv_0 = self.momento_final['cv 0']
+        mf_cv_90i = self.momento_final['cv 90 i']
+        mf_cv_90ii = self.momento_final['cv 90 ii']
+        mf_cv_270i = self.momento_final['cv 270 i']
+        mf_cv_270ii = self.momento_final['cv 270 ii']
         
         #################################################################
         # elu_sc = 1.25x(pp+cp) + 1.5xSC + 1.4xSU
