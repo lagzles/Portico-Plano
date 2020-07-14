@@ -2,22 +2,25 @@
 # PERFIL SOLDADO
 # ##################################### 
 # 
+ya1 = 1.15
+
 def verificacao_flexao_FLA(Section): #d, tw, tf, wx, zx, fy):
     hw = Section.d - 2 * Section.tfs
     lambda_ = hw / Section.tw
     lambda_p = 3.76 * (Section.e / Section.fy) ** 0.5
     lambda_r = 5.70 * (Section.e / Section.fy) ** 0.5
+
     mpl = Section.zx * Section.fy
     mr = Section.wx * Section.fy
 
     if lambda_ <= lambda_p:
-        return mpl / 1.1
+        return mpl  / ya1
 
     elif lambda_ <= lambda_r:
-        return 1 / 1.1 * (mpl - ( mpl - mr) * ((lambda_ - lambda_p) / (lambda_r - lambda_p)))
+        return 1  / ya1* (mpl - ( mpl - mr) * ((lambda_ - lambda_p) / (lambda_r - lambda_p)))
 
     elif lambda_ > lambda_r:
-        return 1.0
+        return mr / ya1
         
 
 def verificacao_flexao_FLM(Section): #bf, tf, kc, wx, zx, tensaor, fy):
@@ -30,35 +33,37 @@ def verificacao_flexao_FLM(Section): #bf, tf, kc, wx, zx, tensaor, fy):
     mcr = Section.wx * 0.9 * Section.e * Section.kc / (lambda_ ** 2)
 
     if lambda_ <= lambda_p:
-        return mpl / 1.1
+        return mpl / ya1
 
     elif lambda_ <= lambda_r:
-        return 1 / 1.1 * (mpl - ( mpl - mr) * ((lambda_ - lambda_p) / (lambda_r - lambda_p)))
+        return 1 / ya1* (mpl - ( mpl - mr) * ((lambda_ - lambda_p) / (lambda_r - lambda_p)))
 
     elif lambda_ > lambda_r:
-        return mcr / 1.1
+        return mcr  / ya1
 
 
 def verificacao_flexao_FLT(Section): #ly, ry, iy, it, wx, zx, cw, tensaor, fy):
     j = Section.it
-    b1 = (Section.fy - Section.tensaor) / ( Section.e * j)
+    b1 = (Section.fy - Section.tensaor) * Section.wx / ( Section.e * j)
 
-    lambda_ = Section.ly * Section.ky / Section.ry
+    # lambda_ = Section.ly * Section.ky / Section.ry
+    lambda_ = Section.ly / Section.ry
     lambda_p = 1.76 * (Section.e / Section.fy) ** 0.5
     lambda_r = (1.38 * (Section.iy * j) ** 0.5) / (Section.ry * Section.j * b1) * ( 1 + (1 + (27 * Section.cw * b1 ** 2) / Section.iy) ** 0.5) ** 0.5
+    # lambda_r = (1.38 * (Section.iy * j) ** 0.5) / (Section.ly**2) * ( 1 + (1 + (27 * Section.cw * b1 ** 2) / Section.iy) ** 0.5) ** 0.5
 
     mpl = Section.zx * Section.fy
     mr = Section.wx * (Section.fy - Section.tensaor)
     mcr = ((1 * 3.14 ** 2) * Section.e * Section.iy / (Section.ly ** 2)) * ( Section.cw / Section.ly * ( 1 + 0.039 * Section.j * (Section.ly ** 2) / Section.cw)) ** 0.5
 
     if lambda_ <= lambda_p:
-        return mpl / 1.1
+        return mpl  / ya1
 
     elif lambda_ <= lambda_r:
-        return 1 / 1.1 * (mpl - ( mpl - mr) * ((lambda_ - lambda_p) / (lambda_r - lambda_p)))
+        return 1  / ya1 * (mpl - ( mpl - mr) * ((lambda_ - lambda_p) / (lambda_r - lambda_p)))
 
     elif lambda_ > lambda_r:
-        return mcr / 1.1
+        return mcr / ya1
 
 def verificacao_cisalhamento(Section): #d, tw, tf, fy):
     hw = Section.d - 2 * Section.tfs
@@ -70,10 +75,11 @@ def verificacao_cisalhamento(Section): #d, tw, tf, fy):
     aw = hw * Section.tw
     vpl = 0.6 * aw * Section.fy
     cv = 0
-    if lambda_ <= lambda_p:
-        cv = 1
-    elif lambda_ <= lambda_r:
-        print('cisalhamento')
+    # if lambda_ <= lambda_p:
+    #     cv = 1
+    # elif lambda_ <= lambda_r:
+    #     # print('cisalhamento')
+    #     continue
 
     if lambda_ <= lambda_p:
         return vpl / 1.15
