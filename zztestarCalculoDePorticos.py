@@ -1,4 +1,5 @@
 from Portico import Portico
+import numpy as np
 
 print('\n hhh'*4)
 print('começando rotina teste')
@@ -63,32 +64,14 @@ portico.AnaliseMatricial()
 
 portico.GerarDesenhoDXF()
 
-# for barra in portico.lista_barras:
-#     if barra.tipo == 'viga':
-#         barra.set_combinacoes_esforcos()
-#         barra.verificar()
-#         print('barra id, momento inicio, ratio Mi, ratio Vi')
-#         print(barra.id,barra.elu_msdi, barra.ratio_mi, barra.ratio_vi)
-#         print()
+portico.verificar_vigas()
 
 
-barra = portico.lista_barras[0]
-barra.set_combinacoes_esforcos()
-barra.verificar()
-print()
-print(barra.sectionInicio)
-print('barra id, momento inicio, MRd, ratio Mi')
-print(barra.id,barra.elu_msdi, barra.ratio_mi)
-print('barra id, momento Final, ratio Mf, ratio Vf')
-print(barra.id,barra.elu_msdf, barra.ratio_mf, barra.ratio_vf)
+from metodos_numericos import *
 
-barra = portico.lista_barras[2]
-barra.set_combinacoes_esforcos()
-barra.verificar()
-print()
-print(barra.sectionInicio)
-print('barra id, momento inicio, MRd, ratio Mi')
-print(barra.id,barra.elu_msdi, barra.ratio_mi)
-print('barra id, momento Final, ratio Mf, ratio Vf')
-print(barra.id,barra.elu_msdf, barra.ratio_mf, barra.ratio_vf)
 
+
+dx = 8.333
+y = np.array([14234.301, 20337.367])
+
+# achar_momento_maximo(y, dx)

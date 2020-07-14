@@ -2,6 +2,7 @@
 import Nos as ns
 import Barras as br
 import numpy as np
+from metodos_numericos import *
 from math import sin
 import desenhar as dwg
 
@@ -24,6 +25,8 @@ class Portico(object):
 		self.cumeeira = cumeeira
 		self.lista_nos = []
 		self.lista_barras = []
+		self.lista_vigas = []
+		self.lista_colunas = []
 		self.lista_bases = []
 		self.gdl = 0
 
@@ -229,6 +232,8 @@ class Portico(object):
 
 	def GerarBarrasEPontos(self):
 		n = len(self.lista_vaos)
+		self.lista_colunas = []
+		self.lista_vigas = []
 		# numero de pilares
 		np = n + 1
 
@@ -340,8 +345,9 @@ class Portico(object):
 					else:
 						kx = 1
 						ky = altura_alvenaria / dy
-					coluna = br.Barras(nob, no, barraId, kx, ky, coluna)
+					coluna = br.Barras(nob, no, barraId, kx, ky, coluna, self)
 					self.lista_barras.append(coluna)
+					self.lista_colunas.append(coluna)
 					self.lista_bases.append(nob)
 
 
@@ -376,9 +382,10 @@ class Portico(object):
 				self.gdl += 3
 				
 				barra_id = len(self.lista_barras) + 1
-				barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, 1, 2.2/dx, 'viga')
+				barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, 1, 2.2/dx, 'viga', self)
 
 				self.lista_barras.append(barraIntermediaria)
+				self.lista_vigas.append(barraIntermediaria)
 				self.lista_nos.append(ptFim)
 				
 		elif n == 1:
@@ -391,7 +398,120 @@ class Portico(object):
 			barraIntermediaria = br.Barras(ptInicio, ptFim, barra_id, 1, 2.2/vao, 'viga')
 
 			self.lista_barras.append(barraIntermediaria)
+			self.lista_vigas.append(barraIntermediaria)
 			self.lista_nos.append(ptFim)
 
 		return ptFim
+
+	########################################################################33
+	########################################################################33
+	########################################################################33
+	########################################################################33
+	########################################################################33
+	########################################################################33
+
+	def verificar_vigas(self):
+		lista_esp = [3.75, 4.75, 6.35, 7.92, 9.52, 12.7, 15.88, 19.4]
+		lista_almas = [450,500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1150, 1200]
+		lista_mesa = [150, 175, 200, 225, 250, 275, 300, 330, 350]
+		for barra in self.lista_vigas:
+			print()
+			barra.set_combinacoes_esforcos()
+			barra.verificar()
+
+			momento_maior = max(barra.elu_msdi, barra.elu_msdf)
+			# section_mais_solicitada
+			local = 'inicio'
+
+			if momento_maior == barra.elu_msdi:
+				local = 'inicio'
+			else:
+				local = 'final'
+
+			dicionario_pesos = {}
+			lista_pesos = []
+			contador  = 0
+
+			for tw in [3.75, 4.75, 6.35, 7.92]:
+				for alma in lista_almas:
+					for tf in lista_esp:
+						for bf in lista_mesa:
+							bool1 = tw < 6.0 and alma > 600
+							bool2 = tf < 9.1 and bf > 200
+							bool22 = tf < 6 and bf > 175
+							bool3 = tw > 8.0 and alma < 1050
+							bool4 = tf < tw or tf > 3*tw
+							bool5 = bf > alma
+
+							if contador > 30:
+								break
+
+							limitacoes = max([bool1, bool2, bool22, bool3, bool4, bool5])
+
+							if not limitacoes:
+								dicionario ={
+									'd': alma/1000,
+									'tw': tw/1000,
+									'bf': bf/1000,
+									'tf': tf/1000,
+									'tipo': 'soldado'
+								}
+								
+								barra.set_section_inicio(dicionario)
+								barra.set_section_final(dicionario)
+								barra.verificar()
+
+								ratio = max(barra.ratio_inicio, barra.ratio_final)
+
+								if ratio < 1.01:
+									peso_linear = barra.section_inicio.set_peso_linear()
+									dicionario_pesos[peso_linear] = dicionario
+									lista_pesos.append(peso_linear)
+									contador += 1
+
+			menor_peso = min(lista_pesos)
+
+			if local == 'inicio':
+				barra.set_section_inicio(dicionario_pesos[menor_peso])
+				barra.verificar_secao_inicio()
+			else:
+				barra.set_section_final(dicionario_pesos[menor_peso])
+				barra.verificar_secao_final()
+
+			dicionario = dicionario_pesos[menor_peso]
+
+			d = dicionario['d']
+			tw = dicionario['tw']
+			bf = dicionario['bf']
+			tf = dicionario['tf']
+
+			for alma in lista_almas:
+				dicionario ={
+					'd': alma/1000,
+					'tw': tw,
+					'bf': bf,
+					'tf': tf,
+					'tipo': 'soldado'
+				}
+				if local == 'final':
+					barra.set_section_inicio(dicionario)
+					barra.verificar_secao_inicio()
+					if barra.ratio_inicio < 1.01:
+						break
+				else:
+					barra.set_section_final(dicionario)
+					barra.verificar_secao_final()
+					if barra.ratio_final < 1.01:
+						break
+
+		print()
+		for viga in self.lista_vigas:
+			print(viga.id, viga.comprimento())
+			print(viga.section_inicio, viga.elu_msdi)
+			print(viga.section_final, viga.elu_msdf)
+			print('cortantes ',viga.elu_vsdi, viga.elu_vsdf)
+			print('viga carregamento elu', viga.carregamento_elu)
+			print('-')
+
+
 

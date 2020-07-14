@@ -2,7 +2,7 @@
 # PERFIL SOLDADO
 # ##################################### 
 # 
-ya1 = 1.15
+ya1 = 1.1
 
 def verificacao_flexao_FLA(Section): #d, tw, tf, wx, zx, fy):
     hw = Section.d - 2 * Section.tfs

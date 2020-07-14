@@ -4,13 +4,14 @@ from Secao import Section
 
 
 class Barras(object):
-    def __init__(self, ni, nf, id, kx, ky, tipo):
+    def __init__(self, ni, nf, id, kx, ky, tipo, portico):
         self.ni = ni
         self.nf = nf
         self.e = 20000000000.0  #kgf/m2 = 200.000,0 MPa
         self.fy = 34500000.0 # kgf/m2 = 350 Mpa
         self.fu = 41500000.0 # kgf/m2 = 415 MPa 
         self.id = id
+        self.portico = portico
 
         self.gdl = nf.gz # gdl # graus de liberdade
         # self.compressao = {}#[]
@@ -27,14 +28,14 @@ class Barras(object):
         # definição das seções iniciais para as barras
         secao = 'soldado'
         # valores estão indo em metros
-        d = 85.0 / 100
+        d = 45.0 / 100
         tw = 0.635 / 100
-        bf = 17.5 / 100
+        bf = 15.0 / 100
         tf = 0.635 / 100
 
         # seção default para barras
-        self.sectionInicio = Section(secao, d, bf, tw, tf, self.e, self.fy)#, kx, ky)
-        self.sectionFinal = Section(secao, d, bf, tw, tf, self.e, self.fy)#, kx, ky)
+        self.section_inicio = Section(secao, d, bf, tw, tf, self.e, self.fy)#, kx, ky)
+        self.section_final = Section(secao, d, bf, tw, tf, self.e, self.fy)#, kx, ky)
         self.set_peso()
         self.set_kx(kx)
         self.set_ky(ky)
@@ -58,13 +59,13 @@ class Barras(object):
        
     # metodos de retorno de parametros
     def get_sections_area(self):
-        area1 = self.sectionInicio.get_area()
-        area2 = self.sectionFinal.get_area()
+        area1 = self.section_inicio.get_area()
+        area2 = self.section_final.get_area()
         return (area1 + area2) / 2.0
 
     def get_sections_ix(self):
-        ix1 = self.sectionInicio.get_ix()
-        ix2 = self.sectionFinal.get_ix()
+        ix1 = self.section_inicio.get_ix()
+        ix2 = self.section_final.get_ix()
         return (ix1 + ix2) / 2.0
 
     def get_peso(self):
@@ -301,15 +302,15 @@ class Barras(object):
     def set_kx(self, kx):
         self.kx = kx
         # seta os comprimentos de flambagem da seção
-        self.sectionInicio.set_lx(self.comprimento(), kx)
-        self.sectionFinal.set_lx(self.comprimento(), kx)
+        self.section_inicio.set_lx(self.comprimento(), kx)
+        self.section_final.set_lx(self.comprimento(), kx)
 
 
     def set_ky(self, ky):
         self.ky = ky
         # seta os comprimentos de flambagem da seção
-        self.sectionInicio.set_ly(self.comprimento(), ky)
-        self.sectionFinal.set_ly(self.comprimento(), ky)
+        self.section_inicio.set_ly(self.comprimento(), ky)
+        self.section_final.set_ly(self.comprimento(), ky)
 
 
     def set_peso(self):
@@ -324,10 +325,22 @@ class Barras(object):
         return peso
 
     def set_section(self, dicionarioInicio, dicionarioFinal, kx, ky): 
-        self.section.set_section(dicionarioInicio)
-        self.sectionFinal.set_section(dicionarioFinal)
+        self.section_inicio.set_section(dicionarioInicio)
+        self.section_final.set_section(dicionarioFinal)
         self.set_kx(kx)
         self.set_ky(ky)
+        self.set_peso()
+        # refaz a matriz de rigidez em coordenadas local e global da barra
+        self.set_kci()
+    
+    def set_section_inicio(self, dicionarioInicio):
+        self.section_inicio.set_section(dicionarioInicio)
+        self.set_peso()
+        # refaz a matriz de rigidez em coordenadas local e global da barra
+        self.set_kci()
+
+    def set_section_final(self, dicionarioFinal): 
+        self.section_final.set_section(dicionarioFinal)
         self.set_peso()
         # refaz a matriz de rigidez em coordenadas local e global da barra
         self.set_kci()
@@ -338,17 +351,17 @@ class Barras(object):
     # TODO ajustar para verificar estado limite ultimo
     # TODO ajustar para verificar estado limite de serviço (talvez separar em 2 metodos)
     def verificar(self):
-        nci_rd = self.sectionInicio.verificar_compressao()
-        ncf_rd = self.sectionFinal.verificar_compressao()
+        nci_rd = self.section_inicio.verificar_compressao()
+        ncf_rd = self.section_final.verificar_compressao()
 
-        nti_rd = self.sectionInicio.verificar_tracao()
-        ntf_rd = self.sectionFinal.verificar_tracao()
+        nti_rd = self.section_inicio.verificar_tracao()
+        ntf_rd = self.section_final.verificar_tracao()
         
-        mi_rd = self.sectionInicio.verificar_flexao()
-        mf_rd = self.sectionFinal.verificar_flexao()
+        mi_rd = self.section_inicio.verificar_flexao()
+        mf_rd = self.section_final.verificar_flexao()
 
-        vi_rd = self.sectionInicio.verificar_cisalhamento()
-        vf_rd = self.sectionFinal.verificar_cisalhamento()
+        vi_rd = self.section_inicio.verificar_cisalhamento()
+        vf_rd = self.section_final.verificar_cisalhamento()
         
         ratio_mi = round(self.elu_msdi / mi_rd, 2)
         ratio_mf = round(self.elu_msdf / mf_rd, 2)
@@ -360,7 +373,6 @@ class Barras(object):
 
         self.ratio_compressao = ratio1
         self.ratio_tracao = ratio2
-        print(mi_rd, mf_rd)
 
         self.ratio_mi = ratio_mi
         self.ratio_mf = ratio_mf
@@ -368,18 +380,20 @@ class Barras(object):
         self.ratio_vf = ratio_vf
 
         # forcas combinadas
-        ratio = abs(self.elu_ncsd)/(2*nci_rd) + self.elu_msdi / mi_rd
-        self.ratio_inicio = ratio
+        ratioi = abs(self.elu_ncsd)/(2*nci_rd) + self.elu_msdi / mi_rd + 0.02
+        self.ratio_inicio = ratioi
 
+        ratiof = abs(self.elu_ncsd)/(2*ncf_rd) + self.elu_msdf / mf_rd + 0.02
+        self.ratio_final = ratiof
 
-        return self.ratio
+        return max(self.ratio_inicio, self.ratio_inicio)
 
 
     def verificar_secao_inicio(self):
-        nci_rd = self.sectionInicio.verificar_compressao()
-        nti_rd = self.sectionInicio.verificar_tracao()
-        mi_rd = self.sectionInicio.verificar_flexao()
-        vi_rd = self.sectionInicio.verificar_cisalhamento()
+        nci_rd = self.section_inicio.verificar_compressao()
+        nti_rd = self.section_inicio.verificar_tracao()
+        mi_rd = self.section_inicio.verificar_flexao()
+        vi_rd = self.section_inicio.verificar_cisalhamento()
         
         ratio_mi = round(self.elu_msdi / mi_rd, 2)
         ratio_vi = round(self.elu_vsdi / vi_rd, 2)
@@ -394,20 +408,17 @@ class Barras(object):
         self.ratio_vi = ratio_vi
         
         # forcas combinadas
-        ratioi = abs(self.elu_ncsd)/(2*nci_rd) + self.elu_msdi / mi_rd
+        ratioi = abs(self.elu_ncsd)/(2*nci_rd) + self.elu_msdi / mi_rd + 0.02
         self.ratio_inicio = ratioi
-        
-        ratiof = abs(self.elu_ncsd)/(2*ncf_rd) + self.elu_msdf / mf_rd
-        self.ratio_final = ratiof
 
-        return max(ratioi, ratiof)
+        return ratioi
 
 
     def verificar_secao_final(self):
-        ncf_rd = self.sectionFinal.verificar_compressao()
-        ntf_rd = self.sectionFinal.verificar_tracao()
-        mf_rd = self.sectionFinal.verificar_flexao()
-        vf_rd = self.sectionFinal.verificar_cisalhamento()
+        ncf_rd = self.section_final.verificar_compressao()
+        ntf_rd = self.section_final.verificar_tracao()
+        mf_rd = self.section_final.verificar_flexao()
+        vf_rd = self.section_final.verificar_cisalhamento()
         
         ratio_mf = round(self.elu_msdf / mf_rd, 2)
         ratio_vf = round(self.elu_vsdf / vf_rd, 2)
@@ -422,7 +433,7 @@ class Barras(object):
         self.ratio_vf = ratio_vf
 
         # forcas combinadas
-        ratio = abs(self.elu_ncsd)/(2*ncf_rd) + self.elu_msdf / mf_rd
+        ratio = abs(self.elu_ncsd)/(2*ncf_rd) + self.elu_msdf / mf_rd + 0.02
         self.ratio_final = ratio
 
         return ratio
@@ -456,6 +467,21 @@ class Barras(object):
         print()
         carregamentos = ['pp','cp','sc','su','cv 0','cv 90 i', 'cv 90 ii', 'cv 270 i', 'cv 270 ii']
         # normal, cortante_inicio, cortante_final, momento_inicio, momento_final
+        pp = self.portico.carregamentos[0][1][0]
+        cp = self.portico.carregamentos[1][1][0]
+        sc = self.portico.carregamentos[2][1][0]
+        su = self.portico.carregamentos[3][1][0]
+
+        cv_0 = self.portico.carregamentos[4][1][0]
+
+        carr_elu_sc = 1.25*(pp +cp) + 1.5*sc + 1.4*su
+        carr_elu_cv = pp + cp + 1.4 * cv_0
+
+        if abs(carr_elu_cv) > abs(carr_elu_sc):
+            self.carregamento_elu = carr_elu_cv
+        else:
+            self.carregamento_elu = carr_elu_sc
+
         ### ESFORÇO NORMAL DA BARRA
         n_pp = self.normal['pp']
         n_cp = self.normal['cp']

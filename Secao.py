@@ -299,7 +299,7 @@ class Section():
         flm = verificacao_flexao_FLM(self)
         flt = verificacao_flexao_FLT(self)
 
-        return min(fla, min(flt, flm))*0.9
+        return min(fla, min(flt, flm))
 
     def verificar_cisalhamento(self):
         cis = verificacao_cisalhamento(self)
