@@ -1,5 +1,4 @@
 from Portico import Portico
-import numpy as np
 
 print('\n hhh'*4)
 print('começando rotina teste')
@@ -61,17 +60,9 @@ carregamentos.append(carr8)
 
 portico.SetarCarregamentos(carregamentos)
 portico.AnaliseMatricial()
-
-portico.GerarDesenhoDXF()
-
-portico.verificar_vigas()
+portico.otimizar_vigas()
 
 
-from metodos_numericos import *
+viga = portico.lista_vigas[0]
 
-
-
-dx = 8.333
-y = np.array([14234.301, 20337.367])
-
-# achar_momento_maximo(y, dx)
+print(viga.ua)
