@@ -17,7 +17,7 @@ def desenhar_portico(portico, filename):
     
     if dwg != None:
         dwg.save()
-
+    
 
 def desenhar_linhas(dwg, ponto_i, ponto_f):
     line = dxf.line(start=ponto_i, end=ponto_f)
