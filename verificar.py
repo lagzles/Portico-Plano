@@ -26,7 +26,7 @@ def verificacao_flexao_FLA(Section): #d, tw, tf, wx, zx, fy):
 def verificacao_flexao_FLM(Section): #bf, tf, kc, wx, zx, tensaor, fy):
     lambda_ = Section.bfs / (2 * Section.tfs)
     lambda_p = 0.38 * (Section.e / Section.fy) ** 0.5
-    lambda_r = 0.95 * (Section.e / (Section.fy - Section.tensaor) / Section.kc) ** 0.5
+    lambda_r = 0.95 * (Section.e / ((Section.fy - Section.tensaor) / Section.kc)) ** 0.5
 
     mpl = Section.zx * Section.fy
     mr = Section.wx* (Section.fy - Section.tensaor)
