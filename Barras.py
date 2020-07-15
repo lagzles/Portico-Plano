@@ -363,10 +363,10 @@ class Barras(object):
         vi_rd = self.section_inicio.verificar_cisalhamento()
         vf_rd = self.section_final.verificar_cisalhamento()
         
-        ratio_mi = round(self.elu_msdi / mi_rd, 2)
-        ratio_mf = round(self.elu_msdf / mf_rd, 2)
-        ratio_vi = round(self.elu_vsdi / vi_rd, 2)
-        ratio_vf = round(self.elu_vsdf / vf_rd, 2)
+        ratio_mi = round(abs(self.elu_msdi) / mi_rd, 2)
+        ratio_mf = round(abs(self.elu_msdf) / mf_rd, 2)
+        ratio_vi = round(abs(self.elu_vsdi) / vi_rd, 2)
+        ratio_vf = round(abs(self.elu_vsdf) / vf_rd, 2)
 
         ratio1 = round(abs(self.elu_ncsd) / nci_rd,2)
         ratio2 = round(abs(self.elu_ntsd) / nti_rd,2)
@@ -380,10 +380,10 @@ class Barras(object):
         self.ratio_vf = ratio_vf
 
         # forcas combinadas
-        ratioi = abs(self.elu_ncsd)/(2*nci_rd) + self.elu_msdi / mi_rd + 0.02
+        ratioi = abs(self.elu_ncsd)/(2*nci_rd) + abs(self.elu_msdi) / mi_rd + 0.02
         self.ratio_inicio = ratioi
 
-        ratiof = abs(self.elu_ncsd)/(2*ncf_rd) + self.elu_msdf / mf_rd + 0.02
+        ratiof = abs(self.elu_ncsd)/(2*ncf_rd) + abs(self.elu_msdf) / mf_rd + 0.02
         self.ratio_final = ratiof
 
         return max(self.ratio_inicio, self.ratio_inicio)
@@ -395,8 +395,8 @@ class Barras(object):
         mi_rd = self.section_inicio.verificar_flexao()
         vi_rd = self.section_inicio.verificar_cisalhamento()
         
-        ratio_mi = round(self.elu_msdi / mi_rd, 2)
-        ratio_vi = round(self.elu_vsdi / vi_rd, 2)
+        ratio_mi = round(abs(self.elu_msdi) / mi_rd, 2)
+        ratio_vi = round(abs(self.elu_vsdi) / vi_rd, 2)
 
         ratio1 = round(abs(self.elu_ncsd) / nci_rd,2)
         ratio2 = round(abs(self.elu_ntsd) / nti_rd,2)
@@ -408,7 +408,7 @@ class Barras(object):
         self.ratio_vi = ratio_vi
         
         # forcas combinadas
-        ratioi = abs(self.elu_ncsd)/(2*nci_rd) + self.elu_msdi / mi_rd + 0.02
+        ratioi = abs(self.elu_ncsd)/(2*nci_rd) + abs(self.elu_msdi) / mi_rd + 0.02
         self.ratio_inicio = ratioi
 
         return ratioi
@@ -420,8 +420,8 @@ class Barras(object):
         mf_rd = self.section_final.verificar_flexao()
         vf_rd = self.section_final.verificar_cisalhamento()
         
-        ratio_mf = round(self.elu_msdf / mf_rd, 2)
-        ratio_vf = round(self.elu_vsdf / vf_rd, 2)
+        ratio_mf = round(abs(self.elu_msdf) / mf_rd, 2)
+        ratio_vf = round(abs(self.elu_vsdf) / vf_rd, 2)
 
         ratio1 = round(abs(self.elu_ncsd) / ncf_rd,2)
         ratio2 = round(abs(self.elu_ntsd) / ntf_rd,2)
@@ -433,20 +433,44 @@ class Barras(object):
         self.ratio_vf = ratio_vf
 
         # forcas combinadas
-        ratio = abs(self.elu_ncsd)/(2*ncf_rd) + self.elu_msdf / mf_rd + 0.02
+        ratio = abs(self.elu_ncsd)/(2*ncf_rd) + abs(self.elu_msdf) / mf_rd + 0.02
         self.ratio_final = ratio
 
         return ratio
 
 
+    def x_do_momento_maximo(self):
+        # ELU = Estado Limite Ultimo
+        # momento_elu = Momento de ELU no inicio da barra
+        # cortante_elu = Cortante de ELU no inicio da barra
+        # carregamento_elu = Carregamento de ELU da barra
+        momento_elu = float(self.elu_msdi)
+        cortante_elu = float(self.elu_vsdi)
+        carregamento_elu = float(self.carregamento_elu)
+        comprimento = float(self.comprimento())
 
+        # Função usando os coeficientes encontrados
+        # usando o metodo 'Curve Fitting'
+        # f(x) = Momento
+        def f(x):
+            y = - carregamento_elu * x ** 2 / 2 - cortante_elu * x + momento_elu
+            return y
 
+        # df(x) = Derivada do momento
+        # df(x) = Cortante
+        def df(x):
+            y = carregamento_elu * x + cortante_elu
+            return y
 
+        # ddf(x) = Derivada do Cortante
+        # ddf(x) = inclinação da Função cortante
+        def ddf(x):
+            y = carregamento_elu
+            return y
+        
+        raiz_mais_alta = max(newton(df, ddf, 0), newton(df, ddf, self.comprimento()))
 
-
-
-
-
+        return [raiz_mais_alta, f(raiz_mais_alta)]
 
 
 
@@ -464,7 +488,6 @@ class Barras(object):
 ##########################################################################################
 
     def set_combinacoes_esforcos(self):
-        print()
         carregamentos = ['pp','cp','sc','su','cv 0','cv 90 i', 'cv 90 ii', 'cv 270 i', 'cv 270 ii']
         # normal, cortante_inicio, cortante_final, momento_inicio, momento_final
         pp = self.portico.carregamentos[0][1][0]
@@ -582,19 +605,31 @@ class Barras(object):
         # elu_cv = 1.00x(pp+cp) + 1.4xCV
         elu_vi_a =  1.25 * (vi_pp + vi_cp) + 1.5 * vi_sc + 1.4 * vi_su
         elu_vi_b = 1.00 * (vi_pp + vi_cp) + 1.4 * vi_cv_0
-        elu_vi = max(abs(elu_vi_a), abs(elu_vi_b))
+        if abs(elu_vi_a) > abs(elu_vi_b):
+            elu_vi = -elu_vi_a
+        else:
+            elu_vi = -elu_vi_b
+        # elu_vi = max(abs(elu_vi_a), abs(elu_vi_b))
 
         elu_vi_b = 1.00 * (vi_pp + vi_cp) + 1.4 * vi_cv_90i
-        elu_vi = max(abs(elu_vi), abs(elu_vi_b))
+        if abs(elu_vi) < abs(elu_vi_b):
+            elu_vi = -elu_vi_b
+        # elu_vi = max(abs(elu_vi), abs(elu_vi_b))
 
         elu_vi_b = 1.00 * (vi_pp + vi_cp) + 1.4 * vi_cv_90ii
-        elu_vi = max(abs(elu_vi), abs(elu_vi_b))
+        if abs(elu_vi) < abs(elu_vi_b):
+            elu_vi = -elu_vi_b
+        # elu_vi = max(abs(elu_vi), abs(elu_vi_b))
 
         elu_vi_b = 1.00 * (vi_pp + vi_cp) + 1.4 * vi_cv_270i
-        elu_vi = max(abs(elu_vi), abs(elu_vi_b))
+        if abs(elu_vi) < abs(elu_vi_b):
+            elu_vi = -elu_vi_b
+        # elu_vi = max(abs(elu_vi), abs(elu_vi_b))
 
         elu_vi_b = 1.00 * (vi_pp + vi_cp) + 1.4 * vi_cv_270ii
-        elu_vi = max(abs(elu_vi), abs(elu_vi_b))
+        if abs(elu_vi) < abs(elu_vi_b):
+            elu_vi = -elu_vi_b
+        # elu_vi = max(abs(elu_vi), abs(elu_vi_b))
 
 
         ##### COMBINAÇÃO DE MOMENTOS INICIO DAS BARRAS
@@ -602,19 +637,31 @@ class Barras(object):
         # elu_cv = 1.00x(pp+cp) + 1.4xCV
         elu_mi_a =  1.25 * (mi_pp + mi_cp) + 1.5 * mi_sc + 1.4 * mi_su
         elu_mi_b = 1.00 * (mi_pp + mi_cp) + 1.4 * mi_cv_0
-        elu_mi = max(abs(elu_mi_a), abs(elu_mi_b))
+        if abs(elu_mi_a) > abs(elu_mi_b):
+            elu_mi = -elu_mi_a
+        else:
+            elu_mi = -elu_mi_b
+        # elu_mi = max(abs(elu_mi_a), abs(elu_mi_b))
 
         elu_mi_b = 1.00 * (mi_pp + mi_cp) + 1.4 * mi_cv_90i
-        elu_mi = max(abs(elu_mi), abs(elu_mi_b))
+        if abs(elu_mi) < abs(elu_mi_b):
+            elu_mi = -elu_mi_b
+        # elu_mi = max(abs(elu_mi), abs(elu_mi_b))
 
         elu_mi_b = 1.00 * (mi_pp + mi_cp) + 1.4 * mi_cv_90ii
-        elu_mi = max(abs(elu_mi), abs(elu_mi_b))
+        if abs(elu_mi) < abs(elu_mi_b):
+            elu_mi = -elu_mi_b
+        # elu_mi = max(abs(elu_mi), abs(elu_mi_b))
 
         elu_mi_b = 1.00 * (mi_pp + mi_cp) + 1.4 * mi_cv_270i
-        elu_mi = max(abs(elu_mi), abs(elu_mi_b))
+        if abs(elu_mi) < abs(elu_mi_b):
+            elu_mi = -elu_mi_b
+        # elu_mi = max(abs(elu_mi), abs(elu_mi_b))
 
         elu_mi_b = 1.00 * (mi_pp + mi_cp) + 1.4 * mi_cv_270ii
-        elu_mi = max(abs(elu_mi), abs(elu_mi_b))
+        if abs(elu_mi) < abs(elu_mi_b):
+            elu_mi = -elu_mi_b
+        # elu_mi = max(abs(elu_mi), abs(elu_mi_b))
 
         
         ##### COMBINAÇÃO DE CORTANTE FINAL DAS BARRAS
@@ -622,19 +669,31 @@ class Barras(object):
         # elu_cv = 1.00x(pp+cp) + 1.4xCV
         elu_vf_a =  1.25 * (vf_pp + vf_cp) + 1.5 * vf_sc + 1.4 * vf_su
         elu_vf_b = 1.00 * (vf_pp + vf_cp) + 1.4 * vf_cv_0
-        elu_vf = max(abs(elu_vf_a), abs(elu_vf_b))
+        if abs(elu_vf_a) > abs(elu_vf_b):
+            elu_vf = elu_vf_a
+        else:
+            elu_vf = elu_vf_b
+        # elu_vf = max(abs(elu_vf_a), abs(elu_vf_b))
 
         elu_vf_b = 1.00 * (vf_pp + vf_cp) + 1.4 * vf_cv_90i
-        elu_vf = max(abs(elu_vf), abs(elu_vf_b))
+        if abs(elu_vf) < abs(elu_vf_b):
+            elu_vf = elu_mi_b
+        # elu_vf = max(abs(elu_vf), abs(elu_vf_b))
 
         elu_vf_b = 1.00 * (vf_pp + vf_cp) + 1.4 * vf_cv_90ii
-        elu_vf = max(abs(elu_vf), abs(elu_vf_b))
+        if abs(elu_vf) < abs(elu_vf_b):
+            elu_vf = elu_mi_b
+        # elu_vf = max(abs(elu_vf), abs(elu_vf_b))
 
         elu_vf_b = 1.00 * (vf_pp + vf_cp) + 1.4 * vf_cv_270i
-        elu_vf = max(abs(elu_vf), abs(elu_vf_b))
+        if abs(elu_vf) < abs(elu_vf_b):
+            elu_vf = elu_mi_b
+        # elu_vf = max(abs(elu_vf), abs(elu_vf_b))
 
         elu_vf_b = 1.00 * (vf_pp + vf_cp) + 1.4 * vf_cv_270ii
-        elu_vf = max(abs(elu_vf), abs(elu_vf_b))
+        if abs(elu_vf) < abs(elu_vf_b):
+            elu_vf = elu_mi_b
+        # elu_vf = max(abs(elu_vf), abs(elu_vf_b))
 
 
         ##### COMBINAÇÃO DE MOMENTOS FINAL DAS BARRAS
@@ -642,19 +701,31 @@ class Barras(object):
         # elu_cv = 1.00x(pp+cp) + 1.4xCV
         elu_mf_a =  1.25 * (mf_pp + mf_cp) + 1.5 * mf_sc + 1.4 * mf_su
         elu_mf_b = 1.00 * (mf_pp + mf_cp) + 1.4 * mf_cv_0
-        elu_mf = max(abs(elu_mf_a), abs(elu_mf_b))
+        if abs(elu_mf_a) > abs(elu_mf_b):
+            elu_mf = elu_mf_a
+        else:
+            elu_mf = elu_mf_b
+        # elu_mf = max(abs(elu_mf_a), abs(elu_mf_b))
 
         elu_mf_b = 1.00 * (mf_pp + mf_cp) + 1.4 * mf_cv_90i
-        elu_mf = max(abs(elu_mf), abs(elu_mf_b))
+        if abs(elu_mf) < abs(elu_mf_b):
+            elu_mf = elu_mf_b
+        # elu_mf = max(abs(elu_mf), abs(elu_mf_b))
 
         elu_mf_b = 1.00 * (mf_pp + mf_cp) + 1.4 * mf_cv_90ii
-        elu_mf = max(abs(elu_mf), abs(elu_mf_b))
+        if abs(elu_mf) < abs(elu_mf_b):
+            elu_mf = elu_mf_b
+        # elu_mf = max(abs(elu_mf), abs(elu_mf_b))
 
         elu_mf_b = 1.00 * (mf_pp + mf_cp) + 1.4 * mf_cv_270i
-        elu_mf = max(abs(elu_mf), abs(elu_mf_b))
+        if abs(elu_mf) < abs(elu_mf_b):
+            elu_mf = elu_mf_b
+        # elu_mf = max(abs(elu_mf), abs(elu_mf_b))
 
         elu_mf_b = 1.00 * (mf_pp + mf_cp) + 1.4 * mf_cv_270ii
-        elu_mf = max(abs(elu_mf), abs(elu_mf_b))
+        if abs(elu_mf) < abs(elu_mf_b):
+            elu_mf = elu_mf_b
+        # elu_mf = max(abs(elu_mf), abs(elu_mf_b))
         
         self.elu_ntsd = elu_nt # Tração
         self.elu_ncsd = elu_nc # Compressão
@@ -666,7 +737,22 @@ class Barras(object):
         self.elu_vsdf = elu_vf # Cortante Final da Barra
 
         
- 
+
+
+def newton(f, fl, x):
+    if fl(x) == 0.0:
+        xnew = x
+        return xnew
+    
+    for i in range(1,101):
+        xnew = x - f(x) / fl(x)
+        if abs(xnew - x) < 0.00000001:
+            break
+   
+    return xnew    
+
+
+
 
 def red(numero):
     return round(numero,2)
