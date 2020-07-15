@@ -2,7 +2,7 @@
 import Nos as ns
 import Barras as br
 import numpy as np
-from metodos_numericos import *
+# from metodos_numericos import *
 from math import sin
 import desenhar as dwg
 
@@ -53,7 +53,6 @@ class Portico(object):
 
 	def AnaliseMatricial(self):
 		print('#'*20)
-		print()
 		print('Fazendo analise\n')
 		self.MontarMatrizRigidez()
 		self.ua = {}
@@ -76,9 +75,10 @@ class Portico(object):
 				if barra.tipo == 'viga':
 					yi = barra.ni.y
 					yf = barra.nf.y
-					if tipoCarr == 'pp':
+					if tipoCarr == 'pp': # vigas da agua da esquerda
 						barra.set_peso()
 						carr = - barra.peso_linear
+
 					elif (yi-yf) < 0: # vigas da agua da esquerda
 						carr = carregamento[0]
 					else: # vigas da agua da direita
@@ -86,9 +86,7 @@ class Portico(object):
 
 				elif barra.tipo == 'coluna-externa':
 					colunaX = barra.ni.x
-					if tipoCarr == 'pp':
-						carr = 0
-					elif colunaX == 0: # coluna externa da esquerda
+					if colunaX == 0: # coluna externa da esquerda
 						carr = carregamento[2]
 					else: # coluna externa da direita
 						carr = carregamento[3]
@@ -96,9 +94,18 @@ class Portico(object):
 				else: # colunas internas
 					carr = 0
 				
-				mz = (carr * (barra.comprimento() ** 2) ) / 12.
-				fy = (carr * barra.comprimento() ) / 2.
-				fx = 0*fy * round(sin(barra.theta),4)
+				# aplicação do peso proprio nos pilares é feita de forma diferente
+				# do que para carregamentos de vento
+				if tipoCarr == 'pp' and barra.tipo != 'viga':
+					barra.set_peso()
+					carr = - barra.peso_linear
+					mz = 0
+					fy = 0
+					fx = (carr * barra.comprimento() ) / 2.
+				else:
+					mz = (carr * (barra.comprimento() ** 2) ) / 12.
+					fy = (carr * barra.comprimento() ) / 2.
+					fx = 0
 
 				# esforços nodais no sistema local da barra
 				fboi = np.zeros((6))
@@ -177,13 +184,15 @@ class Portico(object):
     							# base.ry = reacao
 							base.ry[tipoCarr] = reacao + fo[baseGdlY]
 
-		print('\nReações de APOIO')
-		print('Car	RX	RY	RMZ')
-		for no in self.lista_bases:
-			# print(base)
-			no.printReacoes()
-			print('#########################\n')
-		print('\n')
+		for barra in self.lista_barras:
+			barra.set_combinacoes_esforcos()
+		# print('\nReações de APOIO')
+		# print('Car	RX	RY	RMZ')
+		# for no in self.lista_bases:
+		# 	# print(base)
+		# 	no.printReacoes()
+		# 	print('#########################\n')
+		# print('\n')
 
 	
 	def MontarMatrizRigidez(self):
@@ -317,11 +326,9 @@ class Portico(object):
 
 			# ponto inicial tera propriedade apoio diferente de False
 			if pontoIndex == 0 or pontoIndex == (len(pontos_base)-1):
-				# print('e')
 				apoio = 'engaste'
 				coluna = 'coluna-externa'
 			else:
-				# print('r')
 				# apoio = 'rotuladoInicial'
 				# apoio = 'rotuladoFinal'
 				apoio = 'bi-articulado'
@@ -361,10 +368,13 @@ class Portico(object):
 		yt = cota
 
 		# divisão padrão do vão em 3 partes
-		n = 3
-		if (xt-xb) < 8.000: # caso tenha um 'vao' menor que 8m, não dividir
+		n = 4
+		if (xt-xb) < 6.000: # caso tenha um 'vao' menor que 6m, não dividir
 			n = 1
 			# situacao mais comum quando cumeeira esta no meio do vao
+		elif (xt - xb) < 10.0:
+			n = 2
+			
 		if n != 1:
 			dx = (xt-xb) / n
 			dy = (yt-yb) / n
@@ -410,23 +420,32 @@ class Portico(object):
 	########################################################################33
 	########################################################################33
 
-	def verificar_vigas(self):
+	def otimizar_vigas(self):
 		lista_esp = [3.75, 4.75, 6.35, 7.92, 9.52, 12.7, 15.88, 19.4]
 		lista_almas = [450,500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1050, 1100, 1150, 1200]
 		lista_mesa = [150, 175, 200, 225, 250, 275, 300, 330, 350]
 		for barra in self.lista_vigas:
-			print()
-			barra.set_combinacoes_esforcos()
+			# barra.set_combinacoes_esforcos()
 			barra.verificar()
 
-			momento_maior = max(barra.elu_msdi, barra.elu_msdf)
+			momento_maior = max(abs(barra.elu_msdi), abs(barra.elu_msdf))
 			# section_mais_solicitada
 			local = 'inicio'
 
-			if momento_maior == barra.elu_msdi:
+			x_do_momento_maximo, momento_maximo = barra.x_do_momento_maximo()
+
+			if momento_maior == abs(barra.elu_msdi):
 				local = 'inicio'
+				if 0 <= x_do_momento_maximo <= barra.comprimento():
+					barra.elu_msdi = momento_maximo
+					momento_maior = abs(momento_maximo)
+				# barra.elu_msdi = momento_maior
 			else:
 				local = 'final'
+				if 0 <= x_do_momento_maximo <= barra.comprimento():
+					barra.elu_msdf = momento_maximo
+					momento_maior = abs(momento_maximo)
+				# barra.elu_msdf = momento_maior
 
 			dicionario_pesos = {}
 			lista_pesos = []
@@ -436,17 +455,20 @@ class Portico(object):
 				for alma in lista_almas:
 					for tf in lista_esp:
 						for bf in lista_mesa:
+							bool0 = tw < 4.0 and alma > 450
 							bool1 = tw < 6.0 and alma > 600
 							bool2 = tf < 9.1 and bf > 200
-							bool22 = tf < 6 and bf > 175
-							bool3 = tw > 8.0 and alma < 1050
-							bool4 = tf < tw or tf > 3*tw
-							bool5 = bf > alma
+							bool3 = tf < 12 and bf > 250
+							bool4 = tf < 6 and bf > 175
+							bool5 = tw > 8.0 and alma < 1050
+							bool6 = tf < tw or tf > 3*tw
+							bool7 = bf > alma
+							bool8 = tf < 4
 
 							if contador > 30:
 								break
 
-							limitacoes = max([bool1, bool2, bool22, bool3, bool4, bool5])
+							limitacoes = max([bool0, bool1, bool2, bool3, bool4, bool5, bool6, bool7, bool8])
 
 							if not limitacoes:
 								dicionario ={
@@ -504,14 +526,12 @@ class Portico(object):
 					if barra.ratio_final < 1.01:
 						break
 
-		print()
-		for viga in self.lista_vigas:
-			print(viga.id, viga.comprimento())
-			print(viga.section_inicio, viga.elu_msdi)
-			print(viga.section_final, viga.elu_msdf)
-			print('cortantes ',viga.elu_vsdi, viga.elu_vsdf)
-			print('viga carregamento elu', viga.carregamento_elu)
-			print('-')
+		# print()
+		# for viga in self.lista_vigas:
+		# 	print(viga.id, viga.comprimento())
+		# 	print(viga.section_inicio, round(viga.elu_msdi,2), viga.ratio_inicio)
+		# 	print(viga.section_final, round(viga.elu_msdf,2), viga.ratio_final)
+		# 	print('-')
 
 
 
