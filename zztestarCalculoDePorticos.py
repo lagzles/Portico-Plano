@@ -1,27 +1,49 @@
 from Portico import Portico
+import time
 
 print('\n hhh'*4)
 print('começando rotina teste')
 
 # valores em cm
-vaos = [25, 25]
-pd = 10
-cumeeira = 25
+# bracel armazem de celulose
+vaos = [30.0,22.6,30.0]
+pd = 11
+cumeeira = 41.3
 inc = 3
-influencia = 10.000
+influencia = 21.000
 duas_aguas = True
+altura_minima = 0
 
-portico = Portico(vaos, pd, cumeeira, inc, influencia)
-
-cp = 15 # kgf/m²
+cp = 30 # kgf/m²
 sc = 25 # kgf/m²
 su = 15 # kgf/m²
-cv = 80 # kgf/m²
+cv = 97 # kgf/m²
+
+# # CD Zimba Castelo branco
+# vaos = [22.0, 22.00 ,19.0]
+# pd = 12.0
+# cumeeira = 63.0
+# inc = 3
+# influencia = 21.500
+# duas_aguas = False
+# altura_minima = 900.0
+
+# cp = 20 # kgf/m²
+# sc = 25 # kgf/m²
+# su = 40 # kgf/m²
+# cv = 86 # kgf/m²
+
+
+portico = Portico(vaos, pd, cumeeira, inc, influencia, altura_minima)
+
+influencia_fech = influencia
+if influencia > 14.0:
+    influencia_fech = influencia / 2.0
 
 cpL = cp * influencia 
 scL = sc * influencia
 suL = su * influencia
-cvL = cv * influencia * 0
+cvL = cv * influencia_fech
 
 
 carregamentos = []
@@ -59,10 +81,68 @@ carregamentos.append(carr7)
 carregamentos.append(carr8)
 
 portico.SetarCarregamentos(carregamentos)
+agora0 = time.time()
+agora1 = time.time()
+iterr = 0
+
 portico.AnaliseMatricial()
-portico.otimizar_vigas()
+print(round(time.time()-agora1, 2), ' segundos da analise matricial ')
+
+agora1 = time.time()
+portico.OtimizarColunas()
+portico.InerciaVigasELS()
+portico.OtimizarVigasComInerciaELS()
+print(round(time.time()-agora1, 2), ' segundos da iteração  0 ','pesof = ', portico.SetarPeso())
+
+# agora1 = time.time()
+# portico.PegarColunasELU_ELS()
+# portico.PegarVigasELU_ELS()
+# print(round(time.time()-agora1, 2), ' segundos da iteração  0 ','pesof = ', portico.SetarPeso())
+
+peso_f = portico.SetarPeso()
+peso_i = 1
+iterr = 0
+iterr +=1
+while ((peso_f != peso_i) and iterr < 20): ##iterr < 9:# (peso_f != peso_i): ##
+    peso_i = peso_f
+
+    portico.AnaliseMatricial()
+    agora1 = time.time()
+
+    portico.OtimizarColunas()
+    portico.OtimizarVigasSemELS1()
 
 
-viga = portico.lista_vigas[0]
+    # portico.OtimizarColunasSemELS()
+    # portico.OtimizarVigasSemELS()
 
-print(viga.ua)
+    # portico.AnaliseMatricial()
+    # portico.PegarColunasELU_ELS()
+    # portico.PegarVigasELU_ELS()
+
+    # portico.AnaliseMatricial()
+    # portico.OtimizarColunasSemELS()
+    # portico.OtimizarVigasSemELS()
+
+
+    print(round(time.time()-agora1, 2), ' segundos da iteracao ', iterr,'pesof = ', round(portico.SetarPeso(),2),' kg')
+    iterr += 1
+    peso_f = portico.SetarPeso()
+
+
+final = time.time()
+portico.AnaliseMatricial()
+for viga in portico.lista_barras:
+    print(viga.id, viga.tipo, viga.section_inicio, viga.section_final)
+    els = viga.verificar_els()
+    if els > 1:
+        flecha_maxima = max(viga.deformacao_els_inicio_y, viga.deformacao_els_final_y)
+        # print(viga.id, viga.section_inicio, viga.section_final)
+
+minutos = round((final-agora0)/60,0)
+
+segundos = final - agora0 - minutos*60
+
+# print(round(time.time()-agora0, 2), ' segundos total de verificação')
+print( minutos, ' minutos ',segundos, ' segundos total de verificação')
+print('peso do portico sem acessorios ', round(portico.SetarPeso(), 2))
