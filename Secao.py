@@ -22,7 +22,7 @@ class Section():
         self.set_propriedades()
 
     def __str__(self):
-        return str(self.d*1000)+'x'+str(self.tw*1000)+'x'+str(self.bfs*1000)+'x'+str(self.tfs*1000)
+        return str(round(self.d*1000,0))+'x'+str(round(self.tw*1000,2))+'x'+str(round(self.bfs*1000,0))+'x'+str(round(self.tfs*1000,2))
 
     def set_propriedades(self):
         # self.fy = 35 * 100 # 35 kN/cm² * 100 => 3500 kgf/cm²
