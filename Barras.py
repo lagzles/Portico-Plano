@@ -28,10 +28,10 @@ class Barras(object):
         # definição das seções iniciais para as barras
         secao = 'soldado'
         # valores estão indo em metros
-        d = 45.0 / 100
+        d = 120.0 / 100
         tw = 0.635 / 100
-        bf = 15.0 / 100
-        tf = 0.635 / 100
+        bf = 25.0 / 100
+        tf = 0.952 / 100
 
         # seção default para barras
         self.section_inicio = Section(secao, d, bf, tw, tf, self.e, self.fy)#, kx, ky)
@@ -41,6 +41,9 @@ class Barras(object):
         self.set_ky(ky)
 
         # esforços combinados do inicio e final da barra
+        self.lista_els = []
+        self.lista_elu = []
+        self.inercia_els = 0
         self.elu_ntsd = 0
         self.elu_ncsd = 0
         self.elu_msdi = 0
@@ -53,8 +56,8 @@ class Barras(object):
         self.ratio_vi = 0
         self.ratio_mf = 0
         self.ratio_vf = 0
-        self.ratio_inicio = 0
-        self.ratio_final = 0
+        self.ratio_inicio_elu = 0
+        self.ratio_final_elu = 0
 
        
     # metodos de retorno de parametros
@@ -346,11 +349,51 @@ class Barras(object):
         self.set_kci()
 
 
+    #########################################################################
+    #########################################################################
+    #########################    VERIFICAR    ############################
+    #########################################################################
+    #########################################################################
 
-    # TODO ajustar metodo para fazer combinações dos esforços,
-    # TODO ajustar para verificar estado limite ultimo
+
+
+    def verificar_els(self):
+        vaof = 0
+        vao = 0
+        for i in range(0,len(self.portico.lista_vaos)):
+            vaoi = vaof
+            vaof += self.portico.lista_vaos[i]
+            if vaoi < self.nf.x <= vaof:
+                vao = self.portico.lista_vaos[i]
+                break
+        
+        deformacao_limite_y = vao / 250.0
+        deformacao_limite_x = self.portico.pe_direito / 300.0
+    
+        if deformacao_limite_y == 0:
+            ratio_y_inicio = 0
+            ratio_y_final = 0
+        else:
+            ratio_y_inicio = self.deformacao_els_inicio_y / deformacao_limite_y
+            ratio_y_final = self.deformacao_els_final_y / deformacao_limite_y
+
+        ratio_x_inicio = self.deformacao_els_inicio_x / deformacao_limite_x
+        ratio_x_final = self.deformacao_els_final_x / deformacao_limite_x
+
+
+        ratio_y = max(ratio_y_inicio, ratio_y_final)
+        ratio_x = max(ratio_x_inicio, ratio_x_final)
+
+        ratio_els = max(ratio_y, 0)
+
+        self.ratio_els = ratio_els
+        return ratio_els
+
+
     # TODO ajustar para verificar estado limite de serviço (talvez separar em 2 metodos)
-    def verificar(self):
+    def verificar_elu(self):
+        if self.tipo == 'coluna':
+            a = 1
         nci_rd = self.section_inicio.verificar_compressao()
         ncf_rd = self.section_final.verificar_compressao()
 
@@ -380,16 +423,16 @@ class Barras(object):
         self.ratio_vf = ratio_vf
 
         # forcas combinadas
-        ratioi = abs(self.elu_ncsd)/(2*nci_rd) + abs(self.elu_msdi) / mi_rd + 0.02
-        self.ratio_inicio = ratioi
+        ratioi = max(abs(self.elu_ncsd)/(2*nci_rd) + abs(self.elu_msdi) / mi_rd + 0.02, ratio1)
+        self.ratio_inicio_elu = ratioi
 
-        ratiof = abs(self.elu_ncsd)/(2*ncf_rd) + abs(self.elu_msdf) / mf_rd + 0.02
-        self.ratio_final = ratiof
+        ratiof = max(abs(self.elu_ncsd)/(2*ncf_rd) + abs(self.elu_msdf) / mf_rd + 0.02,ratio1)
+        self.ratio_final_elu = ratiof
 
-        return max(self.ratio_inicio, self.ratio_inicio)
+        return max(self.ratio_inicio_elu, self.ratio_inicio_elu)
 
 
-    def verificar_secao_inicio(self):
+    def verificar_secao_inicio_elu(self):
         nci_rd = self.section_inicio.verificar_compressao()
         nti_rd = self.section_inicio.verificar_tracao()
         mi_rd = self.section_inicio.verificar_flexao()
@@ -408,13 +451,13 @@ class Barras(object):
         self.ratio_vi = ratio_vi
         
         # forcas combinadas
-        ratioi = abs(self.elu_ncsd)/(2*nci_rd) + abs(self.elu_msdi) / mi_rd + 0.02
-        self.ratio_inicio = ratioi
+        ratioi =  max(abs(self.elu_ncsd)/(2*nci_rd) + abs(self.elu_msdi) / mi_rd + 0.02, ratio1)
+        self.ratio_inicio_elu = ratioi
 
         return ratioi
+    
 
-
-    def verificar_secao_final(self):
+    def verificar_secao_final_elu(self):
         ncf_rd = self.section_final.verificar_compressao()
         ntf_rd = self.section_final.verificar_tracao()
         mf_rd = self.section_final.verificar_flexao()
@@ -433,8 +476,8 @@ class Barras(object):
         self.ratio_vf = ratio_vf
 
         # forcas combinadas
-        ratio = abs(self.elu_ncsd)/(2*ncf_rd) + abs(self.elu_msdf) / mf_rd + 0.02
-        self.ratio_final = ratio
+        ratio = max(abs(self.elu_ncsd)/(2*ncf_rd) + abs(self.elu_msdf) / mf_rd + 0.02,ratio1)
+        self.ratio_final_elu = ratio
 
         return ratio
 
@@ -472,20 +515,155 @@ class Barras(object):
 
         return [raiz_mais_alta, f(raiz_mais_alta)]
 
+    ##########################################################################################
+    ##########################################################################################
+    #########################  COMBINAÇÔES DE DEFORMAÇÕES  ###################################
+    ##########################################################################################
+    ##########################################################################################
+
+    def set_deformacoes_combinadas(self):
+        carregamentos = ['pp','cp','sc','su','cv 0','cv 90 i', 'cv 90 ii', 'cv 270 i', 'cv 270 ii']
+        inicio_pp_x = self.ua['pp'][0]
+        inicio_pp_y = self.ua['pp'][1]
+
+        inicio_cp_x = self.ua['cp'][0]
+        inicio_cp_y = self.ua['cp'][1]
+
+        inicio_sc_x = self.ua['sc'][0]
+        inicio_sc_y = self.ua['sc'][1]
+
+        inicio_su_x = self.ua['su'][0]
+        inicio_su_y = self.ua['su'][1]
+
+        deformacao_inicio_x_gravitacional = inicio_pp_x + inicio_cp_x + 0.7*inicio_sc_x + inicio_su_x
+        deformacao_inicio_y_gravitacional = inicio_pp_y + inicio_cp_y + 0.7*inicio_sc_y + inicio_su_y
+
+        deformacao_maxima_inicio_x = abs(deformacao_inicio_x_gravitacional)
+        deformacao_maxima_inicio_y = abs(deformacao_inicio_y_gravitacional)
+    
+        inicio_cv_x = self.ua['cv 0'][0]
+        inicio_cv_y = self.ua['cv 0'][1]
+
+        deformacao_inicio_x_vento =  inicio_pp_x + inicio_cp_x + 0.3*inicio_cv_x
+        deformacao_inicio_y_vento =  inicio_pp_y + inicio_cp_y + 0.3*inicio_cv_y
+
+        deformacao_maxima_inicio_x = max(deformacao_maxima_inicio_x, abs(deformacao_inicio_x_vento))
+        deformacao_maxima_inicio_y = max(deformacao_maxima_inicio_y, abs(deformacao_inicio_y_vento))
+
+        inicio_cv_x = self.ua['cv 90 i'][0]
+        inicio_cv_y = self.ua['cv 90 i'][1]
+
+        deformacao_inicio_x_vento =  inicio_pp_x + inicio_cp_x + 0.3*inicio_cv_x
+        deformacao_inicio_y_vento =  inicio_pp_y + inicio_cp_y + 0.3*inicio_cv_y
+
+        deformacao_maxima_inicio_x = max(deformacao_maxima_inicio_x, abs(deformacao_inicio_x_vento))
+        deformacao_maxima_inicio_y = max(deformacao_maxima_inicio_y, abs(deformacao_inicio_y_vento))
+
+        inicio_cv_x = self.ua['cv 90 ii'][0]
+        inicio_cv_y = self.ua['cv 90 ii'][1]
+
+        deformacao_inicio_x_vento =  inicio_pp_x + inicio_cp_x + 0.3*inicio_cv_x
+        deformacao_inicio_y_vento =  inicio_pp_y + inicio_cp_y + 0.3*inicio_cv_y
+
+        deformacao_maxima_inicio_x = max(deformacao_maxima_inicio_x, abs(deformacao_inicio_x_vento))
+        deformacao_maxima_inicio_y = max(deformacao_maxima_inicio_y, abs(deformacao_inicio_y_vento))
+
+        inicio_cv_x = self.ua['cv 270 i'][0]
+        inicio_cv_y = self.ua['cv 270 i'][1]
+
+        deformacao_inicio_x_vento =  inicio_pp_x + inicio_cp_x + 0.3*inicio_cv_x
+        deformacao_inicio_y_vento =  inicio_pp_y + inicio_cp_y + 0.3*inicio_cv_y
+
+        deformacao_maxima_inicio_x = max(deformacao_maxima_inicio_x, abs(deformacao_inicio_x_vento))
+        deformacao_maxima_inicio_y = max(deformacao_maxima_inicio_y, abs(deformacao_inicio_y_vento))
+
+        inicio_cv_x = self.ua['cv 270 ii'][0]
+        inicio_cv_y = self.ua['cv 270 ii'][1]
+
+        deformacao_inicio_x_vento =  inicio_pp_x + inicio_cp_x + 0.3*inicio_cv_x
+        deformacao_inicio_y_vento =  inicio_pp_y + inicio_cp_y + 0.3*inicio_cv_y
+
+        deformacao_maxima_inicio_x = max(deformacao_maxima_inicio_x, abs(deformacao_inicio_x_vento))
+        deformacao_maxima_inicio_y = max(deformacao_maxima_inicio_y, abs(deformacao_inicio_y_vento))
+
+        final_pp_x = self.ua['pp'][3]
+        final_pp_y = self.ua['pp'][4]
+
+        final_cp_x = self.ua['cp'][3]
+        final_cp_y = self.ua['cp'][4]
+
+        final_sc_x = self.ua['sc'][3]
+        final_sc_y = self.ua['sc'][4]
+
+        final_su_x = self.ua['su'][3]
+        final_su_y = self.ua['su'][4]
+
+        deformacao_final_x_gravitacional = final_pp_x + final_cp_x + 0.7*final_sc_x + final_su_x
+        deformacao_final_y_gravitacional = final_pp_y + final_cp_y + 0.7*final_sc_y + final_su_y
+
+        deformacao_maxima_final_x = abs(deformacao_final_x_gravitacional)
+        deformacao_maxima_final_y = abs(deformacao_final_y_gravitacional)
+    
+        final_cv_x = self.ua['cv 0'][3]
+        final_cv_y = self.ua['cv 0'][4]
+
+        deformacao_final_x_vento =  final_pp_x + final_cp_x + 0.3*final_cv_x
+        deformacao_final_y_vento =  final_pp_y + final_cp_y + 0.3*final_cv_y
+
+        deformacao_maxima_final_x = max(deformacao_maxima_final_x, abs(deformacao_final_x_vento))
+        deformacao_maxima_final_y = max(deformacao_maxima_final_y, abs(deformacao_final_y_vento))
+
+        final_cv_x = self.ua['cv 90 i'][3]
+        final_cv_y = self.ua['cv 90 i'][4]
+
+        deformacao_final_x_vento =  final_pp_x + final_cp_x + 0.3*final_cv_x
+        deformacao_final_y_vento =  final_pp_y + final_cp_y + 0.3*final_cv_y
+
+        deformacao_maxima_final_x = max(deformacao_maxima_final_x, abs(deformacao_final_x_vento))
+        deformacao_maxima_final_y = max(deformacao_maxima_final_y, abs(deformacao_final_y_vento))
+
+        final_cv_x = self.ua['cv 90 ii'][3]
+        final_cv_y = self.ua['cv 90 ii'][4]
+
+        deformacao_final_x_vento =  final_pp_x + final_cp_x + 0.3*final_cv_x
+        deformacao_final_y_vento =  final_pp_y + final_cp_y + 0.3*final_cv_y
+
+        deformacao_maxima_final_x = max(deformacao_maxima_final_x, abs(deformacao_final_x_vento))
+        deformacao_maxima_final_y = max(deformacao_maxima_final_y, abs(deformacao_final_y_vento))
+
+        final_cv_x = self.ua['cv 270 i'][3]
+        final_cv_y = self.ua['cv 270 i'][4]
+
+        deformacao_final_x_vento =  final_pp_x + final_cp_x + 0.3*final_cv_x
+        deformacao_final_y_vento =  final_pp_y + final_cp_y + 0.3*final_cv_y
+
+        deformacao_maxima_final_x = max(deformacao_maxima_final_x, abs(deformacao_final_x_vento))
+        deformacao_maxima_final_y = max(deformacao_maxima_final_y, abs(deformacao_final_y_vento))
+
+        final_cv_x = self.ua['cv 270 ii'][3]
+        final_cv_y = self.ua['cv 270 ii'][4]
+
+        deformacao_final_x_vento =  final_pp_x + final_cp_x + 0.3*final_cv_x
+        deformacao_final_y_vento =  final_pp_y + final_cp_y + 0.3*final_cv_y
+
+        deformacao_maxima_final_x = max(deformacao_maxima_final_x, abs(deformacao_final_x_vento))
+        deformacao_maxima_final_y = max(deformacao_maxima_final_y, abs(deformacao_final_y_vento))
+
+        self.deformacao_els_inicio_x = deformacao_maxima_inicio_x
+        self.deformacao_els_inicio_y = deformacao_maxima_inicio_y
+
+        self.deformacao_els_final_y = deformacao_maxima_final_y
+        self.deformacao_els_final_x = deformacao_maxima_final_x
 
 
 
 
 
-
-
-
-
-##########################################################################################
-##########################################################################################
-#########################  COMBINAÇÔES DE ESFORÇOS  ######################################
-##########################################################################################
-##########################################################################################
+    ##########################################################################################
+    ##########################################################################################
+    #########################  COMBINAÇÔES DE ESFORÇOS  ######################################
+    ##########################################################################################
+    ##########################################################################################
 
     def set_combinacoes_esforcos(self):
         carregamentos = ['pp','cp','sc','su','cv 0','cv 90 i', 'cv 90 ii', 'cv 270 i', 'cv 270 ii']
@@ -577,6 +755,8 @@ class Barras(object):
         elu_n_a =  1.25 * (n_pp + n_cp) + 1.5 * n_sc + 1.4 * n_su
         elu_nc = min((elu_n_a), 0)
         elu_nt = max((elu_n_a), 0)
+        if self.tipo == 'coluna':
+            a = 1
 
         elu_n_b = 1.00 * (n_pp + n_cp) + 1.4 * n_cv_0
         elu_nc = min((elu_nc), (elu_n_b))
