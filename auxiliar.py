@@ -4,12 +4,12 @@ from tkinter import messagebox, filedialog
 
 
 
-def center(win):
+def CentralizarJanela(win):
     """
     centers a tkinter window
     :param win: the root or Toplevel window to center
     """
-    win.update_idletasks()
+    # win.update_idletasks()
     width = win.winfo_width()
     frm_width = win.winfo_rootx() - win.winfo_x()
     win_width = width + 2 * frm_width
