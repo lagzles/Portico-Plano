@@ -11,7 +11,8 @@ import desenhar as dwg
 
 class Portico(object):
 			
-	def __init__(self, lista_vaos, pe_direito, cumeeira, inclinacao, influencia, altura_minima, pilar_metalico):
+	def __init__(self, lista_vaos, pe_direito, cumeeira, inclinacao,
+				influencia, altura_minima, pilar_metalico):
 		# lista_vaos = [22]
 		# pe_direito = 12.5
 		# cumeeira = 22
@@ -60,8 +61,6 @@ class Portico(object):
     		
 
 	def AnaliseMatricial(self):
-		# print('#'*20)
-		# print('Fazendo analise\n')
 		self.MontarMatrizRigidez()
 		self.ua = {}
 		oitao = sum(self.lista_vaos)
@@ -153,13 +152,11 @@ class Portico(object):
 				break
 			ka_inv = np.linalg.inv(ka)
 
-
 			# deslocamentos nós livres
 			ua = np.dot(ka_inv, fca)
 			fb = np.dot(kb, ua)
 
 			self.ua[tipoCarr] = ua
-
 			grausReacoes = len(fb)
 
 			for barra in self.lista_barras:
@@ -173,7 +170,6 @@ class Portico(object):
 					baseGdlX = base.gx - 1
 					baseGdlY = base.gy - 1
 					baseGdlZ = base.gz - 1
-					# print(baseGdlX, gdlX)
 					baseApoio = base.apoio
 					if baseApoio == "engaste":
 						if(baseGdlX == grauApoio):
@@ -196,19 +192,8 @@ class Portico(object):
 			barra.set_combinacoes_esforcos()
 			barra.set_deformacoes_combinadas()
 		
-		# print('\nReações de APOIO')
-		# print('Car	RX	RY	RMZ')
-		# for no in self.lista_bases:
-		# 	# print(base)
-		# 	no.printReacoes()
-		# 	print('#########################\n')
-		# print('\n')
-
 	
 	def MontarMatrizRigidez(self):
-		# print('#'*20)
-		# print()
-		# print('Matriz de rigidez do portico')
 		k = np.zeros((self.gdl, self.gdl))
 
 		for barra in self.lista_barras:
@@ -234,12 +219,12 @@ class Portico(object):
 					ap = ap + [no.gy - 1]
 					liv = liv + [no.gz - 1]
 
-				elif  no.apoio == 'simples':
+				elif  no.apoio == 'rotulado':
 					ap = ap + [no.gy - 1]
 					ap = ap + [no.gx - 1]
 					liv = liv + [no.gz - 1]
 
-				elif no.apoio == 'bi-articulado' or no.apoio == 'vertical':
+				elif no.apoio == 'bi-articulado' or no.apoio == 'simples':
 					ap = ap + [no.gy - 1]
 					liv = liv + [no.gx - 1]
 					liv = liv + [no.gz - 1]
@@ -349,8 +334,6 @@ class Portico(object):
 					apoio = 'engaste'
 					coluna = 'coluna-externa'
 				else:
-					# apoio = 'rotuladoInicial'
-					# apoio = 'rotuladoFinal'
 					apoio = 'bi-articulado'
 
 				gx = gdl + 1
@@ -379,9 +362,11 @@ class Portico(object):
 			else: # pilar de concreto
 				for no in self.lista_nos:
 					if no.x == 0:
-						no.apoio = 'simples'
+						no.apoio = 'rotulado'
+						self.lista_bases.append(no)
 					elif no.x == ponto[0]:
-						no.apoio = 'vertical'
+						no.apoio = 'simples'
+						self.lista_bases.append(no)
 
 
 	def PontosIntermediariosDaViga(self, noi, vao, cota):

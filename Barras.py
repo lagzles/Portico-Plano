@@ -28,9 +28,9 @@ class Barras(object):
         # definição das seções iniciais para as barras
         secao = 'soldado'
         # valores estão indo em metros
-        d = 120.0 / 100
+        d = 105.0 / 100
         tw = 0.635 / 100
-        bf = 25.0 / 100
+        bf = 22.5 / 100
         tf = 0.952 / 100
 
         # seção default para barras
