@@ -15,3 +15,8 @@
 *.PDF	 diff=astextplain
 *.rtf	 diff=astextplain
 *.RTF	 diff=astextplain
+
+# Ignore languages
+*.html linguist-detectable=false
+*.toc linguist-detectable=false
+*.tcl linguist-detectable=false
